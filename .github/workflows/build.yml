@@ -19,25 +19,27 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-
-      - name: Accept all Android licenses (force)
+      - name: Setup Android environment
         run: |
-          mkdir -p $ANDROID_HOME/licenses
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-          echo -e "\n84831b940964496ad9267ff4d6e4b4d6" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          echo -e "\n994b2c67b605f9aabe1d1747a85e83f1" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
-          echo -e "\n33b6a2b64607f11b759f320ef9dff4ae" > $ANDROID_HOME/licenses/google-gdk-license
-          echo -e "\nd56f5187479451eabf01fb78af6dfcb6" > $ANDROID_HOME/licenses/android-googletv-license
-          echo -e "\n601085b94cd77f0b54ff86406957099e" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          yes | sdkmanager --licenses || true
-
-      - name: Install required SDK packages
-        run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          # Use the pre-installed Android SDK on GitHub runners
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          
+          # Create local.properties
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+          
+          # Force accept all licenses
+          mkdir -p /usr/local/lib/android/sdk/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > /usr/local/lib/android/sdk/licenses/android-sdk-license
+          echo -e "\n84831b940964496ad9267ff4d6e4b4d6" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
+          echo -e "\n994b2c67b605f9aabe1d1747a85e83f1" > /usr/local/lib/android/sdk/licenses/android-sdk-arm-dbt-license
+          echo -e "\n33b6a2b64607f11b759f320ef9dff4ae" > /usr/local/lib/android/sdk/licenses/google-gdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb6" > /usr/local/lib/android/sdk/licenses/android-googletv-license
+          echo -e "\n601085b94cd77f0b54ff86406957099e" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
+          
+          # Install needed packages non-interactively
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
