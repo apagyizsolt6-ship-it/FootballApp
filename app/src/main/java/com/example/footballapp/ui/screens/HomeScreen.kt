@@ -20,6 +20,8 @@ import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.ui.theme.TextPrimary
 import com.example.footballapp.ui.theme.TextSecondary
 import com.example.footballapp.viewmodel.HomeViewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -67,71 +69,130 @@ fun HomeScreen(
             }
         }
 
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryGreen)
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = PrimaryGreen)
+                }
             }
-        } else if (uiState.error != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Hiba: ${uiState.error}\n(Ingyenes kulcs korlátozott lehet)",
-                    color = TextSecondary,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                // Next matches
-                item {
+            uiState.error != null && uiState.matchesByDate.isEmpty() &&
+                    uiState.nextMatches.isEmpty() && uiState.recentMatches.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "Következő mérkőzések",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                        text = "Hiba: ${uiState.error}\n(Ingyenes kulcs korlátozott lehet)",
+                        color = TextSecondary,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    // ===== NAPTÁR NÉZET (napi bontás) =====
+                    if (uiState.matchesByDate.isNotEmpty()) {
+                        val sortedDates = uiState.matchesByDate.keys.sorted()
 
-                if (uiState.nextMatches.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Nincs közelgő mérkőzés",
-                            color = TextSecondary,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                } else {
-                    items(uiState.nextMatches.take(10)) { event ->
-                        MatchCard(event = event)
-                    }
-                }
+                        sortedDates.forEach { date ->
+                            val events = uiState.matchesByDate[date] ?: emptyList()
+                            if (events.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = formatHungarianDate(date),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = PrimaryGreen,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(
+                                            start = 16.dp,
+                                            top = 20.dp,
+                                            bottom = 8.dp
+                                        )
+                                    )
+                                }
+                                items(events) { event ->
+                                    MatchCard(event = event)
+                                }
+                            }
+                        }
+                    } else {
+                        // ===== FALLBACK: régi next + recent =====
+                        item {
+                            Text(
+                                text = "Következő mérkőzések",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    top = 16.dp,
+                                    bottom = 8.dp
+                                )
+                            )
+                        }
 
-                // Recent matches
-                item {
-                    Text(
-                        text = "Legutóbbi eredmények",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
-                    )
-                }
+                        if (uiState.nextMatches.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Nincs közelgő mérkőzés",
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else {
+                            items(uiState.nextMatches.take(15)) { event ->
+                                MatchCard(event = event)
+                            }
+                        }
 
-                if (uiState.recentMatches.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Nincs friss eredmény",
-                            color = TextSecondary,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                } else {
-                    items(uiState.recentMatches.take(10)) { event ->
-                        MatchCard(event = event)
+                        item {
+                            Text(
+                                text = "Legutóbbi eredmények",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    top = 24.dp,
+                                    bottom = 8.dp
+                                )
+                            )
+                        }
+
+                        if (uiState.recentMatches.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Nincs friss eredmény",
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else {
+                            items(uiState.recentMatches.take(15)) { event ->
+                                MatchCard(event = event)
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * yyyy-MM-dd → "2026. október 10." formátum
+ */
+private fun formatHungarianDate(date: String): String {
+    return try {
+        val input = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val output = SimpleDateFormat("yyyy. MMMM d.", Locale("hu", "HU"))
+        val parsed = input.parse(date)
+        if (parsed != null) output.format(parsed) else date
+    } catch (e: Exception) {
+        date
     }
 }
