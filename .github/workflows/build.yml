@@ -21,14 +21,10 @@ jobs:
 
       - name: Setup Android environment
         run: |
-          # Use the pre-installed Android SDK on GitHub runners
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          
-          # Create local.properties
           echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
           
-          # Force accept all licenses
           mkdir -p /usr/local/lib/android/sdk/licenses
           echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > /usr/local/lib/android/sdk/licenses/android-sdk-license
           echo -e "\n84831b940964496ad9267ff4d6e4b4d6" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
@@ -37,7 +33,6 @@ jobs:
           echo -e "\nd56f5187479451eabf01fb78af6dfcb6" > /usr/local/lib/android/sdk/licenses/android-googletv-license
           echo -e "\n601085b94cd77f0b54ff86406957099e" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
           
-          # Install needed packages non-interactively
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" || true
 
@@ -48,10 +43,19 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.5
 
+      - name: Debug project structure
+        run: |
+          echo "=== Project structure ==="
+          find . -name "*.gradle.kts" -o -name "settings.gradle*" | head -20
+          echo "=== settings.gradle.kts ==="
+          cat settings.gradle.kts || true
+          echo "=== Root build.gradle.kts ==="
+          cat build.gradle.kts || true
+
       - name: Build Debug APK
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
