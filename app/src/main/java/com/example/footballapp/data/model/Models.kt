@@ -1,3 +1,5 @@
+package com.example.footballapp.data.model
+
 import com.google.gson.annotations.SerializedName
 
 // ========== Team ==========
@@ -38,7 +40,7 @@ data class Team(
 // ========== Event / Match ==========
 data class EventResponse(
     @SerializedName("events") val events: List<Event>?,
-    @SerializedName("event") val event: List<Event>? // some endpoints use this
+    @SerializedName("event") val event: List<Event>?
 )
 
 data class Event(
