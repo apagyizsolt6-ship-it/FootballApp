@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val isLoading: Boolean = false,
+    val matchesByDate: Map<String, List<Event>> = emptyMap(),
     val nextMatches: List<Event> = emptyList(),
     val recentMatches: List<Event> = emptyList(),
     val error: String? = null,
@@ -30,16 +31,38 @@ class HomeViewModel(
 
     fun loadMatches(leagueId: String = _uiState.value.selectedLeagueId) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, selectedLeagueId = leagueId)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                selectedLeagueId = leagueId
+            )
 
+            // 1. Napi teljes lista (naptár nézet) – ez a fő forrás
+            val dailyResult = repository.getEventsForDays(
+                days = 21,
+                leagueId = leagueId,
+                includePastDays = 5
+            )
+
+            // 2. Fallback a régi next/past endpointokra
             val nextResult = repository.getNextLeagueEvents(leagueId)
             val pastResult = repository.getPastLeagueEvents(leagueId)
 
+            val matchesByDate = dailyResult.getOrDefault(emptyMap())
+            val next = nextResult.getOrDefault(emptyList())
+            val past = pastResult.getOrDefault(emptyList())
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                nextMatches = nextResult.getOrDefault(emptyList()),
-                recentMatches = pastResult.getOrDefault(emptyList()),
-                error = nextResult.exceptionOrNull()?.message ?: pastResult.exceptionOrNull()?.message
+                matchesByDate = matchesByDate,
+                nextMatches = next,
+                recentMatches = past,
+                error = if (matchesByDate.isEmpty() && next.isEmpty() && past.isEmpty()) {
+                    dailyResult.exceptionOrNull()?.message
+                        ?: nextResult.exceptionOrNull()?.message
+                        ?: pastResult.exceptionOrNull()?.message
+                        ?: "Nincs elérhető meccs (ingyenes API limit)"
+                } else null
             )
         }
     }
