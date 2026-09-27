@@ -2,130 +2,212 @@ package com.example.footballapp.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// Eredeti ligák és konstansok
-const val PREMIER_LEAGUE = "English Premier League"
-const val LA_LIGA = "Spanish La Liga"
-const val SERIE_A = "Italian Serie A"
-const val BUNDESLIGA = "German Bundesliga"
-const val LIGUE_1 = "French Ligue 1"
-
-object Leagues {
-    const val PREMIER_LEAGUE = "English Premier League"
-    const val LA_LIGA = "Spanish La Liga"
-    const val SERIE_A = "Italian Serie A"
-    const val BUNDESLIGA = "German Bundesliga"
-    const val LIGUE_1 = "French Ligue 1"
-}
-
-// Eredeti API Válasz modellek
+// ========== Matches ==========
 data class MatchesResponse(
-    @SerializedName("matches") val matches: List<ApiMatch>? = null,
-    @SerializedName("events") val events: List<ApiMatch>? = null
+    @SerializedName("matches") val matches: List<FdMatch>? = null,
+    @SerializedName("resultSet") val resultSet: ResultSet? = null
 )
 
+data class ResultSet(
+    @SerializedName("count") val count: Int? = null,
+    @SerializedName("first") val first: String? = null,
+    @SerializedName("last") val last: String? = null
+)
+
+data class FdMatch(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("utcDate") val utcDate: String? = null,
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("matchday") val matchday: Int? = null,
+    @SerializedName("stage") val stage: String? = null,
+    @SerializedName("group") val group: String? = null,
+    @SerializedName("lastUpdated") val lastUpdated: String? = null,
+    @SerializedName("homeTeam") val homeTeam: FdTeamRef? = null,
+    @SerializedName("awayTeam") val awayTeam: FdTeamRef? = null,
+    @SerializedName("score") val score: FdScore? = null,
+    @SerializedName("competition") val competition: FdCompetition? = null
+)
+
+data class FdTeamRef(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("shortName") val shortName: String? = null,
+    @SerializedName("tla") val tla: String? = null,
+    @SerializedName("crest") val crest: String? = null
+)
+
+data class FdScore(
+    @SerializedName("winner") val winner: String? = null,
+    @SerializedName("duration") val duration: String? = null,
+    @SerializedName("fullTime") val fullTime: FdScoreDetail? = null,
+    @SerializedName("halfTime") val halfTime: FdScoreDetail? = null
+)
+
+data class FdScoreDetail(
+    @SerializedName("home") val home: Int? = null,
+    @SerializedName("away") val away: Int? = null
+)
+
+data class FdCompetition(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("code") val code: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("emblem") val emblem: String? = null
+)
+
+// ========== Standings ==========
 data class StandingsResponse(
-    @SerializedName("standings") val standings: List<TableEntry>? = null,
-    @SerializedName("table") val table: List<TableEntry>? = null
+    @SerializedName("standings") val standings: List<StandingGroup>? = null,
+    @SerializedName("competition") val competition: FdCompetition? = null
 )
 
+data class StandingGroup(
+    @SerializedName("stage") val stage: String? = null,
+    @SerializedName("type") val type: String? = null, // TOTAL, HOME, AWAY
+    @SerializedName("table") val table: List<FdTableEntry>? = null
+)
+
+data class FdTableEntry(
+    @SerializedName("position") val position: Int? = null,
+    @SerializedName("team") val team: FdTeamRef? = null,
+    @SerializedName("playedGames") val playedGames: Int? = null,
+    @SerializedName("form") val form: String? = null,
+    @SerializedName("won") val won: Int? = null,
+    @SerializedName("draw") val draw: Int? = null,
+    @SerializedName("lost") val lost: Int? = null,
+    @SerializedName("points") val points: Int? = null,
+    @SerializedName("goalsFor") val goalsFor: Int? = null,
+    @SerializedName("goalsAgainst") val goalsAgainst: Int? = null,
+    @SerializedName("goalDifference") val goalDifference: Int? = null
+)
+
+// ========== Teams ==========
 data class TeamsResponse(
-    @SerializedName("teams") val teams: List<Team>? = null
+    @SerializedName("teams") val teams: List<FdTeam>? = null
 )
 
 data class FdTeam(
     @SerializedName("id") val id: Int? = null,
     @SerializedName("name") val name: String? = null,
-    @SerializedName("crest") val crest: String? = null
+    @SerializedName("shortName") val shortName: String? = null,
+    @SerializedName("tla") val tla: String? = null,
+    @SerializedName("crest") val crest: String? = null,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("website") val website: String? = null,
+    @SerializedName("founded") val founded: Int? = null,
+    @SerializedName("clubColors") val clubColors: String? = null,
+    @SerializedName("venue") val venue: String? = null
 )
+
+// ========== Kompatibilitási réteg a régi UI-hoz ==========
+// A MatchCard és a többi UI még a régi Event / TableEntry mezőket várja,
+// ezért mapping függvényeket adunk.
+
+data class Event(
+    val idEvent: String? = null,
+    val strEvent: String? = null,
+    val strLeague: String? = null,
+    val strHomeTeam: String? = null,
+    val strAwayTeam: String? = null,
+    val intHomeScore: String? = null,
+    val intAwayScore: String? = null,
+    val dateEvent: String? = null,
+    val strTime: String? = null,
+    val strStatus: String? = null,
+    val idHomeTeam: String? = null,
+    val idAwayTeam: String? = null,
+    val strHomeTeamBadge: String? = null,
+    val strAwayTeamBadge: String? = null
+)
+
+fun FdMatch.toEvent(): Event {
+    val dateTime = utcDate ?: ""
+    val date = dateTime.take(10)
+    val time = if (dateTime.length >= 16) dateTime.substring(11, 16) else null
+
+    val homeScore = score?.fullTime?.home?.toString()
+    val awayScore = score?.fullTime?.away?.toString()
+
+    val statusText = when (status) {
+        "FINISHED" -> "FT"
+        "IN_PLAY", "PAUSED", "LIVE" -> "LIVE"
+        "SCHEDULED", "TIMED" -> "NS"
+        "POSTPONED" -> "PP"
+        "CANCELLED" -> "CANC"
+        else -> status
+    }
+
+    return Event(
+        idEvent = id?.toString(),
+        strEvent = "${homeTeam?.name} vs ${awayTeam?.name}",
+        strLeague = competition?.name,
+        strHomeTeam = homeTeam?.name,
+        strAwayTeam = awayTeam?.name,
+        intHomeScore = homeScore,
+        intAwayScore = awayScore,
+        dateEvent = date,
+        strTime = time,
+        strStatus = statusText,
+        idHomeTeam = homeTeam?.id?.toString(),
+        idAwayTeam = awayTeam?.id?.toString(),
+        strHomeTeamBadge = homeTeam?.crest,
+        strAwayTeamBadge = awayTeam?.crest
+    )
+}
 
 data class TableEntry(
-    @SerializedName("position") val position: Int? = null,
-    @SerializedName("team") val team: FdTeam? = null,
-    @SerializedName("playedGames") val playedGames: Int? = null,
-    @SerializedName("won") val won: Int? = null,
-    @SerializedName("draw") val draw: Int? = null,
-    @SerializedName("lost") val lost: Int? = null,
-    @SerializedName("goalsFor") val goalsFor: Int? = null,
-    @SerializedName("goalsAgainst") val goalsAgainst: Int? = null,
-    @SerializedName("goalDifference") val goalDifference: Int? = null,
-    @SerializedName("points") val points: Int? = null,
-    @SerializedName("intRank") val intRank: String? = null,
-    @SerializedName("strTeam") val strTeam: String? = null,
-    @SerializedName("strTeamBadge") val strTeamBadge: String? = null,
-    @SerializedName("strBadge") val strBadge: String? = null,
-    @SerializedName("played") val played: String? = null,
-    @SerializedName("win") val win: String? = null,
-    @SerializedName("draws") val draws: String? = null,
-    @SerializedName("loss") val loss: String? = null,
-    @SerializedName("goalsfor") val goalsfor: String? = null,
-    @SerializedName("goalsagainst") val goalsagainst: String? = null,
-    @SerializedName("total") val total: String? = null,
-    // Kompatibilitás a TableRow-hoz
-    @SerializedName("intPlayed") val intPlayed: Int? = null,
-    @SerializedName("intWin") val intWin: Int? = null,
-    @SerializedName("intDraw") val intDraw: Int? = null,
-    @SerializedName("intLoss") val intLoss: Int? = null,
-    @SerializedName("intGoalDifference") val intGoalDifference: Int? = null,
-    @SerializedName("intPoints") val intPoints: Int? = null
+    val intRank: String? = null,
+    val strTeam: String? = null,
+    val strBadge: String? = null,
+    val intPlayed: String? = null,
+    val intWin: String? = null,
+    val intDraw: String? = null,
+    val intLoss: String? = null,
+    val intGoalsFor: String? = null,
+    val intGoalsAgainst: String? = null,
+    val intGoalDifference: String? = null,
+    val intPoints: String? = null,
+    val strForm: String? = null
 )
 
+fun FdTableEntry.toTableEntry(): TableEntry = TableEntry(
+    intRank = position?.toString(),
+    strTeam = team?.name,
+    strBadge = team?.crest,
+    intPlayed = playedGames?.toString(),
+    intWin = won?.toString(),
+    intDraw = draw?.toString(),
+    intLoss = lost?.toString(),
+    intGoalsFor = goalsFor?.toString(),
+    intGoalsAgainst = goalsAgainst?.toString(),
+    intGoalDifference = goalDifference?.toString(),
+    intPoints = points?.toString(),
+    strForm = form
+)
+
+// Régi kompatibilitás (keresés / csapat)
 data class Team(
-    @SerializedName("idTeam") val idTeam: String? = null,
-    @SerializedName("strTeam") val strTeam: String? = null,
-    @SerializedName("strTeamBadge") val strTeamBadge: String? = null,
-    @SerializedName("strCountry") val strCountry: String? = null,
-    @SerializedName("strDescriptionEN") val strDescriptionEN: String? = null
+    val strLeague: String? = null,
+    val idTeam: String? = null,
+    val strTeam: String? = null,
+    val strTeamBadge: String? = null,
+    val strStadium: String? = null,
+    val strDescriptionEN: String? = null,
+    val strWebsite: String? = null,
+    val strCountry: String? = null
 )
 
-data class ApiMatch(
-    @SerializedName("id") val id: Any? = null,
-    @SerializedName("utcDate") val utcDate: String? = null,
-    @SerializedName("status") val status: String? = null,
-    @SerializedName("homeTeam") val homeTeam: FdTeam? = null,
-    @SerializedName("awayTeam") val awayTeam: FdTeam? = null,
-    @SerializedName("score") val score: ApiScore? = null,
-    @SerializedName("idEvent") val idEvent: String? = null,
-    @SerializedName("strEvent") val strEvent: String? = null,
-    @SerializedName("dateEvent") val dateEvent: String? = null,
-    @SerializedName("strTime") val strTime: String? = null,
-    @SerializedName("strHomeTeam") val strHomeTeam: String? = null,
-    @SerializedName("strAwayTeam") val strAwayTeam: String? = null,
-    @SerializedName("intHomeScore") val intHomeScore: String? = null,
-    @SerializedName("intAwayScore") val intAwayScore: String? = null
+fun FdTeam.toTeam(): Team = Team(
+    idTeam = id?.toString(),
+    strTeam = name,
+    strTeamBadge = crest,
+    strStadium = venue,
+    strWebsite = website
 )
 
-data class ApiScore(
-    @SerializedName("fullTime") val fullTime: ApiScoreDetail? = null
-)
-
-data class ApiScoreDetail(
-    @SerializedName("home") val home: Int? = null,
-    @SerializedName("away") val away: Int? = null
-)
-
-// UI modellek a naptárhoz és részletekhez
-data class Match(
-    val id: String,
-    val league: String,
-    val homeTeam: String,
-    val awayTeam: String,
-    val homeScore: Int?,
-    val awayScore: Int?,
-    val date: String,
-    val time: String,
-    val status: MatchStatus,
-    val isFavorite: Boolean = false,
-    val homePossession: Int = 50,
-    val awayPossession: Int = 50,
-    val shotsOnTargetHome: Int = 0,
-    val shotsOnTargetAway: Int = 0,
-    val venue: String = "Stadion"
-)
-
-enum class MatchStatus {
-    LIVE, FINISHED, UPCOMING
-}
-
-enum class MatchFilter {
-    ALL, LIVE, FINISHED, UPCOMING
-}
+data class TeamResponse(val teams: List<Team>? = null)
+data class EventResponse(val events: List<Event>? = null)
+data class TableResponse(val table: List<TableEntry>? = null)
+data class PlayerResponse(val player: List<Player>? = null)
+data class Player(val idPlayer: String? = null, val strPlayer: String? = null)
