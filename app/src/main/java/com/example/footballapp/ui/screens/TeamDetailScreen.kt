@@ -41,10 +41,15 @@ fun TeamDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.team?.strTeam ?: "Csapat") },
+                title = {
+                    Text(uiState.team?.strTeam ?: "Csapat")
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Vissza")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Vissza"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -53,6 +58,7 @@ fun TeamDetailScreen(
             )
         }
     ) { padding ->
+
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
@@ -60,8 +66,11 @@ fun TeamDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = PrimaryGreen)
+                CircularProgressIndicator(
+                    color = PrimaryGreen
+                )
             }
+
         } else if (uiState.team == null) {
             Box(
                 modifier = Modifier
@@ -69,17 +78,27 @@ fun TeamDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Csapat nem található", color = TextSecondary)
+                Text(
+                    "Csapat nem található",
+                    color = TextSecondary
+                )
             }
+
         } else {
             val team = uiState.team!!
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(
+                    bottom = 24.dp
+                )
             ) {
-                // Header with badge
+
+                // =========================
+                // CSAPAT FEJLÉC
+                // =========================
                 item {
                     Column(
                         modifier = Modifier
@@ -95,18 +114,26 @@ fun TeamDetailScreen(
                                 .clip(CircleShape),
                             contentScale = ContentScale.Fit
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Spacer(
+                            modifier = Modifier.height(12.dp)
+                        )
+
                         Text(
                             text = team.strTeam ?: "",
                             style = MaterialTheme.typography.headlineMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "${team.strLeague ?: ""} • ${team.strCountry ?: ""}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
+
+                        if (!team.strCountry.isNullOrBlank()) {
+                            Text(
+                                text = team.strCountry,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary
+                            )
+                        }
+
                         if (!team.strStadium.isNullOrBlank()) {
                             Text(
                                 text = "Stadion: ${team.strStadium}",
@@ -118,33 +145,53 @@ fun TeamDetailScreen(
                     }
                 }
 
-                // Description
+                // =========================
+                // LEÍRÁS
+                // =========================
                 if (!team.strDescriptionEN.isNullOrBlank()) {
                     item {
                         Text(
                             text = "Leírás",
                             style = MaterialTheme.typography.titleLarge,
                             color = TextPrimary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = 8.dp
+                            )
                         )
+
                         Text(
-                            text = team.strDescriptionEN.take(400) + if ((team.strDescriptionEN?.length ?: 0) > 400) "..." else "",
+                            text = team.strDescriptionEN.take(400) +
+                                    if ((team.strDescriptionEN?.length ?: 0) > 400) {
+                                        "..."
+                                    } else {
+                                        ""
+                                    },
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp
+                            )
                         )
                     }
                 }
 
-                // Next matches
+                // =========================
+                // KÖVETKEZŐ MÉRKŐZÉSEK
+                // =========================
                 item {
                     Text(
                         text = "Következő mérkőzések",
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
-                        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            top = 24.dp,
+                            bottom = 8.dp
+                        )
                     )
                 }
+
                 if (uiState.nextEvents.isEmpty()) {
                     item {
                         Text(
@@ -159,15 +206,22 @@ fun TeamDetailScreen(
                     }
                 }
 
-                // Last matches
+                // =========================
+                // LEGUTÓBBI MÉRKŐZÉSEK
+                // =========================
                 item {
                     Text(
                         text = "Legutóbbi mérkőzések",
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
-                        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            top = 24.dp,
+                            bottom = 8.dp
+                        )
                     )
                 }
+
                 if (uiState.lastEvents.isEmpty()) {
                     item {
                         Text(
