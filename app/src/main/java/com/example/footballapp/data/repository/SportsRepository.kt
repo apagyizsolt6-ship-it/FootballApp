@@ -1,112 +1,143 @@
 package com.example.footballapp.data.repository
 
-import com.example.footballapp.data.model.Match
-import com.example.footballapp.data.model.MatchStatus
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import java.time.LocalDate
+import com.example.footballapp.data.api.ApiClient
+import com.example.footballapp.data.model.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class SportsRepository {
 
-    private val today = LocalDate.now().toString()
-    private val yesterday = LocalDate.now().minusDays(1).toString()
-    private val tomorrow = LocalDate.now().plusDays(1).toString()
+    private val api = ApiClient.api
 
-    private val _matches = MutableStateFlow(
-        listOf(
-            Match(
-                id = "1",
-                league = "Premier League",
-                homeTeam = "Arsenal FC",
-                awayTeam = "Chelsea FC",
-                homeScore = 2,
-                awayScore = 1,
-                date = today,
-                time = "15:00",
-                status = MatchStatus.FINISHED,
-                isFavorite = true,
-                homePossession = 54,
-                awayPossession = 46,
-                shotsOnTargetHome = 7,
-                shotsOnTargetAway = 4,
-                venue = "Emirates Stadium"
-            ),
-            Match(
-                id = "2",
-                league = "Premier League",
-                homeTeam = "Manchester City FC",
-                awayTeam = "Liverpool FC",
-                homeScore = null,
-                awayScore = null,
-                date = today,
-                time = "17:30",
-                status = MatchStatus.LIVE,
-                isFavorite = false,
-                homePossession = 60,
-                awayPossession = 40,
-                shotsOnTargetHome = 5,
-                shotsOnTargetAway = 3,
-                venue = "Etihad Stadium"
-            ),
-            Match(
-                id = "3",
-                league = "Premier League",
-                homeTeam = "Manchester United FC",
-                awayTeam = "Tottenham Hotspur",
-                homeScore = null,
-                awayScore = null,
-                date = tomorrow,
-                time = "20:00",
-                status = MatchStatus.UPCOMING,
-                isFavorite = false,
-                homePossession = 50,
-                awayPossession = 50,
-                shotsOnTargetHome = 0,
-                shotsOnTargetAway = 0,
-                venue = "Old Trafford"
-            ),
-            Match(
-                id = "4",
-                league = "La Liga",
-                homeTeam = "Real Madrid",
-                awayTeam = "FC Barcelona",
-                homeScore = 3,
-                awayScore = 2,
-                date = yesterday,
-                time = "21:00",
-                status = MatchStatus.FINISHED,
-                isFavorite = true,
-                homePossession = 48,
-                awayPossession = 52,
-                shotsOnTargetHome = 8,
-                shotsOnTargetAway = 7,
-                venue = "Santiago Bernabéu"
-            ),
-            Match(
-                id = "5",
-                league = "Serie A",
-                homeTeam = "Inter Milan",
-                awayTeam = "AC Milan",
-                homeScore = 1,
-                awayScore = 1,
-                date = today,
-                time = "18:00",
-                status = MatchStatus.UPCOMING,
-                isFavorite = false,
-                venue = "San Siro"
+    companion object {
+        // football-data.org competition codes
+        const val PREMIER_LEAGUE = "PL"
+        const val LA_LIGA = "PD"
+        const val SERIE_A = "SA"
+        const val BUNDESLIGA = "BL1"
+        const val LIGUE_1 = "FL1"
+        const val CHAMPIONS_LEAGUE = "CL"
+    }
+
+    /**
+     * Naptár nézet: meccsek dátum szerint csoportosítva.
+     * dateFrom = ma - 7 nap, dateTo = ma + 21 nap
+     */
+    suspend fun getMatchesGroupedByDate(
+        competitionCode: String,
+        pastDays: Int = 7,
+        futureDays: Int = 21
+    ): Result<Map<String, List<Event>>> = withContext(Dispatchers.IO) {
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val calendar = Calendar.getInstance()
+
+            calendar.add(Calendar.DAY_OF_YEAR, -pastDays)
+            val dateFrom = dateFormat.format(calendar.time)
+
+            calendar.add(Calendar.DAY_OF_YEAR, pastDays + futureDays)
+            val dateTo = dateFormat.format(calendar.time)
+
+            val response = api.getCompetitionMatches(
+                competitionCode = competitionCode,
+                dateFrom = dateFrom,
+                dateTo = dateTo
             )
-        )
-    )
-    val matches: StateFlow<List<Match>> = _matches.asStateFlow()
 
-    fun toggleFavorite(matchId: String) {
-        _matches.value = _matches.value.map { match ->
-            if (match.id == matchId) match.copy(isFavorite = !match.isFavorite) else match
+            val events = response.matches
+                ?.map { it.toEvent() }
+                ?: emptyList()
+
+            val grouped = events
+                .filter { !it.dateEvent.isNullOrBlank() }
+                .groupBy { it.dateEvent!! }
+                .mapValues { (_, list) ->
+                    list.sortedBy { it.strTime ?: "99:99" }
+                }
+                .toSortedMap()
+
+            Result.success(grouped)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    fun getMatchById(matchId: String): Match? {
-        return _matches.value.find { it.id == matchId }
+    suspend fun getLeagueTable(competitionCode: String = PREMIER_LEAGUE): Result<List<TableEntry>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getStandings(competitionCode)
+                val totalTable = response.standings
+                    ?.firstOrNull { it.type == "TOTAL" }
+                    ?.table
+                    ?: response.standings?.firstOrNull()?.table
+                    ?: emptyList()
+
+                Result.success(totalTable.map { it.toTableEntry() })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getTeamsInLeague(competitionCode: String = PREMIER_LEAGUE): Result<List<Team>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getTeams(competitionCode)
+                Result.success(response.teams?.map { it.toTeam() } ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getTeam(teamId: String): Result<Team?> = withContext(Dispatchers.IO) {
+        try {
+            val id = teamId.toIntOrNull() ?: return@withContext Result.success(null)
+            val team = api.getTeam(id)
+            Result.success(team.toTeam())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
+
+    suspend fun getTeamMatches(teamId: String, status: String? = null): Result<List<Event>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val id = teamId.toIntOrNull() ?: return@withContext Result.success(emptyList())
+                val response = api.getTeamMatches(id, status = status, limit = 20)
+                Result.success(response.matches?.map { it.toEvent() } ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    // Keresés – football-data.org-on nincs szabad szöveges keresés,
+    // ezért a liga csapataiból szűrünk
+    suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
+        try {
+            val all = mutableListOf<Team>()
+            listOf(PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1).forEach { code ->
+                try {
+                    val teams = api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList()
+                    all.addAll(teams)
+                } catch (_: Exception) {}
+            }
+            val filtered = all
+                .distinctBy { it.idTeam }
+                .filter { it.strTeam?.contains(query, ignoreCase = true) == true }
+            Result.success(filtered)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Régi kompatibilitás (ha valahol még hívják)
+    suspend fun getNextLeagueEvents(leagueId: String): Result<List<Event>> =
+        getMatchesGroupedByDate(leagueId, pastDays = 0, futureDays = 14)
+            .map { it.values.flatten() }
+
+    suspend fun getPastLeagueEvents(leagueId: String): Result<List<Event>> =
+        getMatchesGroupedByDate(leagueId, pastDays = 14, futureDays = 0)
+            .map { it.values.flatten() }
 }
