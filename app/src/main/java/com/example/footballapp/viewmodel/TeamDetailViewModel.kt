@@ -30,8 +30,8 @@ class TeamDetailViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             val teamResult = repository.getTeam(teamId)
-            val nextResult = repository.getNextEvents(teamId)
-            val lastResult = repository.getLastEvents(teamId)
+            val nextResult = repository.getTeamMatches(teamId, status = "SCHEDULED")
+            val lastResult = repository.getTeamMatches(teamId, status = "FINISHED")
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,

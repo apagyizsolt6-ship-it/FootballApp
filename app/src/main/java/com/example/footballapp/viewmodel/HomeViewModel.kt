@@ -35,14 +35,18 @@ class HomeViewModel(
                 selectedLeagueId = leagueId
             )
 
-            val result = repository.getMatchesGroupedByDate(leagueId = leagueId, extraDays = 14)
+            val result = repository.getMatchesGroupedByDate(
+                competitionCode = leagueId,
+                pastDays = 7,
+                futureDays = 21
+            )
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 matchesByDate = result.getOrDefault(emptyMap()),
                 error = if (result.isFailure || result.getOrDefault(emptyMap()).isEmpty()) {
                     result.exceptionOrNull()?.message
-                        ?: "Nincs elérhető meccs (próbáld saját API kulccsal)"
+                        ?: "Nincs meccs. Ellenőrizd az API tokent az ApiClient.kt-ben!"
                 } else null
             )
         }
