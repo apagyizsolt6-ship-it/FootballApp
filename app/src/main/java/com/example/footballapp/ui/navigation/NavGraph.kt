@@ -19,9 +19,10 @@ import com.example.footballapp.ui.screens.HomeScreen
 import com.example.footballapp.ui.screens.MatchDetailScreen
 import com.example.footballapp.ui.screens.SearchScreen
 import com.example.footballapp.ui.screens.TableScreen
+import com.example.footballapp.ui.screens.TeamDetailScreen
 
 @Composable
-fun NavGraph() {
+fun FootballNavGraph() {
     val navController = rememberNavController()
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
@@ -92,8 +93,8 @@ fun NavGraph() {
             }
             composable("table") {
                 TableScreen(
-                    onTeamClick = { teamName ->
-                        navController.navigate("team_detail/$teamName")
+                    onTeamClick = { teamId ->
+                        navController.navigate("team_detail/$teamId")
                     }
                 )
             }
@@ -104,6 +105,16 @@ fun NavGraph() {
                 val matchId = backStackEntry.arguments?.getString("matchId") ?: ""
                 MatchDetailScreen(
                     matchId = matchId,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "team_detail/{teamId}",
+                arguments = listOf(navArgument("teamId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val teamId = backStackEntry.arguments?.getString("teamId") ?: ""
+                TeamDetailScreen(
+                    teamId = teamId,
                     onBackClick = { navController.popBackStack() }
                 )
             }
