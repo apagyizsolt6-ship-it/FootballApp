@@ -22,9 +22,9 @@ data class LeagueMatches(
 
 data class HomeUiState(
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val selectedDate: String = "",
     val availableDates: List<String> = emptyList(),
-    /** Kiválasztott nap meccsei ligánként, egymás alatt */
     val leaguesForDay: List<LeagueMatches> = emptyList(),
     val error: String? = null
 )
@@ -47,25 +47,19 @@ class HomeViewModel(
     )
 
     init {
-        val dates = buildDateList(pastDays = 3, futureDays = 12) // összesen 15 nap
+        val dates = buildDateList(pastDays = 3, futureDays = 12)
         val today = dateFormat.format(Calendar.getInstance().time)
         val initial = if (dates.contains(today)) today else dates.firstOrNull() ?: today
-        _uiState.value = _uiState.value.copy(
-            availableDates = dates,
-            selectedDate = initial
-        )
+        _uiState.value = _uiState.value.copy(availableDates = dates, selectedDate = initial)
         loadDay(initial)
     }
 
     private fun buildDateList(pastDays: Int, futureDays: Int): List<String> {
         val cal = Calendar.getInstance()
         cal.add(Calendar.DAY_OF_YEAR, -pastDays)
-        val list = mutableListOf<String>()
-        repeat(pastDays + futureDays) {
-            list.add(dateFormat.format(cal.time))
-            cal.add(Calendar.DAY_OF_YEAR, 1)
+        return List(pastDays + futureDays) {
+            dateFormat.format(cal.time).also { cal.add(Calendar.DAY_OF_YEAR, 1) }
         }
-        return list
     }
 
     fun selectDate(date: String) {
@@ -74,36 +68,36 @@ class HomeViewModel(
         loadDay(date)
     }
 
-    private fun loadDay(date: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+    fun refresh() {
+        loadDay(_uiState.value.selectedDate, forceRefresh = true)
+    }
 
+    private fun loadDay(date: String, forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = !forceRefresh && _uiState.value.leaguesForDay.isEmpty(),
+                isRefreshing = forceRefresh,
+                error = null
+            )
             try {
-                // Párhuzamosan lekérjük mind az 5 ligát erre a napra
                 val results = leagues.map { (code, name) ->
                     async {
-                        val result = repository.getMatchesForDate(code, date)
-                        LeagueMatches(
-                            leagueCode = code,
-                            leagueName = name,
-                            matches = result.getOrDefault(emptyList())
-                        )
+                        val result = repository.getMatchesForDate(code, date, forceRefresh)
+                        LeagueMatches(code, name, result.getOrDefault(emptyList()))
                     }
                 }.awaitAll()
-
-                // Csak azokat a ligákat mutatjuk, ahol van meccs
                 val withMatches = results.filter { it.matches.isNotEmpty() }
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     leaguesForDay = withMatches,
                     error = if (withMatches.isEmpty()) "Nincs meccs ezen a napon" else null
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    leaguesForDay = emptyList(),
-                    error = e.message ?: "Hiba a betöltéskor"
+                    isRefreshing = false,
+                    error = e.message ?: "Hiba"
                 )
             }
         }
