@@ -1,199 +1,145 @@
 package com.example.footballapp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.footballapp.data.model.MatchFilter
+import com.example.footballapp.data.repository.SportsRepository
 import com.example.footballapp.ui.components.MatchCard
+import com.example.footballapp.ui.theme.PrimaryGreen
+import com.example.footballapp.ui.theme.TextPrimary
+import com.example.footballapp.ui.theme.TextSecondary
 import com.example.footballapp.viewmodel.HomeViewModel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = viewModel(),
-    onMatchClick: (String) -> Unit
+    viewModel: HomeViewModel = viewModel()
 ) {
-    val selectedLeague by viewModel.selectedLeague.collectAsState()
-    val selectedDate by viewModel.selectedDate.collectAsState()
-    val selectedFilter by viewModel.selectedFilter.collectAsState()
-    val matches by viewModel.matches.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    val leagues = listOf("Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1")
+    val leagues = listOf(
+        "Premier League" to SportsRepository.PREMIER_LEAGUE,
+        "La Liga" to SportsRepository.LA_LIGA,
+        "Serie A" to SportsRepository.SERIE_A,
+        "Bundesliga" to SportsRepository.BUNDESLIGA,
+        "Ligue 1" to SportsRepository.LIGUE_1,
+        "Champions League" to SportsRepository.CHAMPIONS_LEAGUE
+    )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0F1222))
-            .padding(horizontal = 16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header
         Text(
             text = "Mérkőzések",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
         )
-        Spacer(modifier = Modifier.height(12.dp))
 
-        // Bajnokság választó sáv
+        // League chips
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            leagues.forEach { league ->
-                val isSelected = league == selectedLeague
-                Button(
-                    onClick = { viewModel.selectLeague(league) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected) Color(0xFF00C853) else Color(0xFF1E2235)
+            leagues.forEach { (name, id) ->
+                FilterChip(
+                    selected = uiState.selectedLeagueId == id,
+                    onClick = { viewModel.selectLeague(id) },
+                    label = { Text(name) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = PrimaryGreen,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     )
+                )
+            }
+        }
+
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = league,
-                        color = if (isSelected) Color.Black else Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    CircularProgressIndicator(color = PrimaryGreen)
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Vízszintes naptár sáv
-        HorizontalDateStrip(
-            selectedDate = selectedDate,
-            onDateSelected = { viewModel.selectDate(it) }
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Szűrő chip-ek
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MatchFilter.values().forEach { filter ->
-                val isSelected = filter == selectedFilter
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { viewModel.setFilter(filter) },
-                    label = {
+            uiState.matchesByDate.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = when (filter) {
-                                MatchFilter.ALL -> "Összes"
-                                MatchFilter.LIVE -> "Élő"
-                                MatchFilter.FINISHED -> "Lejárt"
-                                MatchFilter.UPCOMING -> "Közelgő"
-                            }
+                            text = uiState.error ?: "Nincs elérhető meccs",
+                            color = TextSecondary,
+                            modifier = Modifier.padding(16.dp)
                         )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF00C853),
-                        selectedLabelColor = Color.Black,
-                        containerColor = Color(0xFF1E2235),
-                        labelColor = Color.White
-                    )
-                )
+                        Text(
+                            text = "Tipp: cseréld ki az API kulcsot sajátra\naz ApiClient.kt-ben",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
             }
-        }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    // NAPTÁR NÉZET – dátum szerint
+                    val sortedDates = uiState.matchesByDate.keys.sorted()
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (matches.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Nincs mérkőzés ezen a napon.",
-                    color = Color.Gray,
-                    fontSize = 16.sp
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(matches) { match ->
-                    MatchCard(
-                        match = match,
-                        onClick = { onMatchClick(match.id) },
-                        onFavoriteClick = { viewModel.toggleFavorite(match.id) }
-                    )
+                    sortedDates.forEach { date ->
+                        val events = uiState.matchesByDate[date] ?: emptyList()
+                        if (events.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = formatHungarianDate(date),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryGreen,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(
+                                        start = 16.dp,
+                                        top = 20.dp,
+                                        bottom = 8.dp
+                                    )
+                                )
+                            }
+                            items(events, key = { it.idEvent ?: it.hashCode().toString() }) { event ->
+                                MatchCard(event = event)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
-fun HorizontalDateStrip(
-    selectedDate: String,
-    onDateSelected: (String) -> Unit
-) {
-    val today = LocalDate.now()
-    val dates = (-3..3).map { today.plusDays(it.toLong()) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        dates.forEach { date ->
-            val dateString = date.toString()
-            val isSelected = dateString == selectedDate
-            val dayName = date.format(DateTimeFormatter.ofPattern("EEE"))
-            val dayNum = date.format(DateTimeFormatter.ofPattern("MM.dd."))
-
-            Card(
-                onClick = { onDateSelected(dateString) },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) Color(0xFF00C853) else Color(0xFF1E2235)
-                ),
-                modifier = Modifier.width(75.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = dayName.uppercase(),
-                        color = if (isSelected) Color.Black else Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = dayNum,
-                        color = if (isSelected) Color.Black else Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+private fun formatHungarianDate(date: String): String {
+    return try {
+        val input = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val output = SimpleDateFormat("yyyy. MMMM d.", Locale("hu", "HU"))
+        val parsed = input.parse(date)
+        if (parsed != null) output.format(parsed) else date
+    } catch (e: Exception) {
+        date
     }
 }
