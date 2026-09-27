@@ -67,11 +67,12 @@ interface SportsApi {
         @Query("l") leagueName: String
     ): TeamResponse
 
-    // Events by day
+    // Events by day (with optional league filter)
     @GET("eventsday.php")
     suspend fun getEventsByDay(
         @Query("d") date: String,
-        @Query("s") sport: String? = "Soccer"
+        @Query("s") sport: String? = "Soccer",
+        @Query("l") leagueId: String? = null
     ): EventResponse
 
     // Lookup event
