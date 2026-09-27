@@ -2,7 +2,13 @@ package com.example.footballapp.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// Bajnokság konstansok a TableScreen számára
+// Eredeti ligák és konstansok
+const val PREMIER_LEAGUE = "English Premier League"
+const val LA_LIGA = "Spanish La Liga"
+const val SERIE_A = "Italian Serie A"
+const val BUNDESLIGA = "German Bundesliga"
+const val LIGUE_1 = "French Ligue 1"
+
 object Leagues {
     const val PREMIER_LEAGUE = "English Premier League"
     const val LA_LIGA = "Spanish La Liga"
@@ -11,7 +17,7 @@ object Leagues {
     const val LIGUE_1 = "French Ligue 1"
 }
 
-// Eredeti API Válasz modellek a SportsApi-hoz
+// Eredeti API Válasz modellek
 data class MatchesResponse(
     @SerializedName("matches") val matches: List<ApiMatch>? = null,
     @SerializedName("events") val events: List<ApiMatch>? = null
@@ -53,7 +59,14 @@ data class TableEntry(
     @SerializedName("loss") val loss: String? = null,
     @SerializedName("goalsfor") val goalsfor: String? = null,
     @SerializedName("goalsagainst") val goalsagainst: String? = null,
-    @SerializedName("total") val total: String? = null
+    @SerializedName("total") val total: String? = null,
+    // Kompatibilitás a TableRow-hoz
+    @SerializedName("intPlayed") val intPlayed: Int? = null,
+    @SerializedName("intWin") val intWin: Int? = null,
+    @SerializedName("intDraw") val intDraw: Int? = null,
+    @SerializedName("intLoss") val intLoss: Int? = null,
+    @SerializedName("intGoalDifference") val intGoalDifference: Int? = null,
+    @SerializedName("intPoints") val intPoints: Int? = null
 )
 
 data class Team(
