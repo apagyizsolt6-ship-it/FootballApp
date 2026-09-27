@@ -12,7 +12,6 @@ class SportsRepository {
 
     private val api = ApiClient.api
 
-    // Popular league IDs
     companion object {
         const val PREMIER_LEAGUE = "4328"
         const val LA_LIGA = "4335"
@@ -116,56 +115,68 @@ class SportsRepository {
             }
         }
 
-    suspend fun getEventsByDay(date: String): Result<List<Event>> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.getEventsByDay(date, "Soccer")
-            Result.success(response.events ?: emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun getEventsByDay(date: String, leagueId: String? = null): Result<List<Event>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getEventsByDay(date, "Soccer", leagueId)
+                Result.success(response.events ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
-    }
 
     /**
-     * Naptár nézethez: lekéri a következő [days] nap meccseit,
-     * és dátum szerint csoportosítja.
-     * Ha leagueId meg van adva, csak az adott ligát szűri.
+     * Naptár: next + past meccseket dátum szerint csoportosít.
+     * Emellett megpróbálja a napi endpointot is a következő napokra.
      */
-    suspend fun getEventsForDays(
-        days: Int = 21,
-        leagueId: String? = null,
-        includePastDays: Int = 3
+    suspend fun getMatchesGroupedByDate(
+        leagueId: String,
+        extraDays: Int = 14
     ): Result<Map<String, List<Event>>> = withContext(Dispatchers.IO) {
         try {
+            val allEvents = mutableListOf<Event>()
+
+            // 1. Next + Past (ezek megbízhatóbbak a free kulccsal)
+            try {
+                val next = api.getNextLeagueEvents(leagueId).events ?: emptyList()
+                allEvents.addAll(next)
+            } catch (_: Exception) {}
+
+            try {
+                val past = api.getPastLeagueEvents(leagueId).events ?: emptyList()
+                allEvents.addAll(past)
+            } catch (_: Exception) {}
+
+            // 2. Extra napok a napi endpointból (ha van adat)
             val calendar = Calendar.getInstance()
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val resultMap = linkedMapOf<String, List<Event>>()
+            // Kezdjünk 5 nappal ezelőtt
+            calendar.add(Calendar.DAY_OF_YEAR, -5)
 
-            // Először a múltbeli napok (legutóbbi eredmények)
-            calendar.add(Calendar.DAY_OF_YEAR, -includePastDays)
-            for (i in 0 until (days + includePastDays)) {
+            for (i in 0 until (extraDays + 5)) {
                 val date = dateFormat.format(calendar.time)
                 try {
-                    val response = api.getEventsByDay(date, "Soccer")
-                    var events = response.events ?: emptyList()
-
-                    if (leagueId != null) {
-                        events = events.filter { it.idLeague == leagueId }
-                    }
-
-                    // Csak a releváns meccseket tartjuk meg
-                    events = events.filter {
-                        it.strSport == "Soccer" || it.strSport == null
-                    }
-
-                    if (events.isNotEmpty()) {
-                        resultMap[date] = events.sortedBy { it.strTime ?: "99:99" }
-                    }
-                } catch (_: Exception) {
-                    // Egy nap hibája ne törje el az egészet
-                }
+                    val dayEvents = api.getEventsByDay(date, "Soccer", leagueId).events ?: emptyList()
+                    allEvents.addAll(dayEvents)
+                } catch (_: Exception) {}
                 calendar.add(Calendar.DAY_OF_YEAR, 1)
             }
-            Result.success(resultMap)
+
+            // Egyedi meccsek (idEvent alapján)
+            val unique = allEvents
+                .filter { !it.idEvent.isNullOrBlank() }
+                .distinctBy { it.idEvent }
+                .filter { it.idLeague == leagueId || it.idLeague == null }
+
+            // Csoportosítás dátum szerint
+            val grouped = unique
+                .groupBy { it.dateEvent ?: "Ismeretlen" }
+                .mapValues { (_, list) ->
+                    list.sortedBy { it.strTime ?: "99:99" }
+                }
+                .toSortedMap()
+
+            Result.success(grouped)
         } catch (e: Exception) {
             Result.failure(e)
         }
