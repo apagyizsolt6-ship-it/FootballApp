@@ -17,28 +17,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.footballapp.data.model.Event
-import com.example.footballapp.ui.theme.*
+import com.example.footballapp.ui.theme.LiveRed
+import com.example.footballapp.ui.theme.PrimaryGreen
 
 @Composable
 fun MatchCard(
     event: Event,
     onClick: () -> Unit = {}
 ) {
+    val isLive = event.strStatus == "LIVE"
+    val hasScore = event.intHomeScore != null && event.intAwayScore != null
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { onClick() },
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // League + Date/Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -47,36 +51,43 @@ fun MatchCard(
                 Text(
                     text = event.strLeague ?: "",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = buildString {
-                        append(event.dateEvent ?: "")
-                        if (!event.strTime.isNullOrBlank()) {
-                            append(" • ")
-                            append(event.strTime?.take(5) ?: "")
-                        }
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
+                if (isLive) {
+                    Text(
+                        text = "● LIVE",
+                        color = LiveRed,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                } else {
+                    Text(
+                        text = buildString {
+                            append(event.dateEvent ?: "")
+                            if (!event.strTime.isNullOrBlank()) {
+                                append(" • ")
+                                append(event.strTime?.take(5) ?: "")
+                            }
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Teams + Score
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Home
                 Text(
                     text = event.strHomeTeam ?: "Home",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -84,39 +95,40 @@ fun MatchCard(
                     textAlign = TextAlign.End
                 )
 
-                // Score or VS
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .background(
-                            color = if (event.intHomeScore != null) PrimaryGreen.copy(alpha = 0.15f)
-                            else SurfaceDark,
+                            color = when {
+                                isLive -> LiveRed.copy(alpha = 0.15f)
+                                hasScore -> PrimaryGreen.copy(alpha = 0.15f)
+                                else -> MaterialTheme.colorScheme.surface
+                            },
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (event.intHomeScore != null && event.intAwayScore != null) {
+                    if (hasScore) {
                         Text(
                             text = "${event.intHomeScore} - ${event.intAwayScore}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryGreen,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLive) LiveRed else PrimaryGreen,
+                            fontSize = 16.sp
                         )
                     } else {
                         Text(
                             text = "vs",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = TextSecondary
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                // Away
                 Text(
                     text = event.strAwayTeam ?: "Away",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -125,16 +137,15 @@ fun MatchCard(
                 )
             }
 
-            // Status if available
-            if (!event.strStatus.isNullOrBlank() && event.strStatus != "Not Started") {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = event.strStatus ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (event.strStatus?.contains("Live", ignoreCase = true) == true) LiveRed else TextSecondary,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = event.strStatus ?: "",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isLive) LiveRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (isLive) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }

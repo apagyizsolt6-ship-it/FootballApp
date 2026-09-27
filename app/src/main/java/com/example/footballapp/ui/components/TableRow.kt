@@ -3,6 +3,7 @@ package com.example.footballapp.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,83 +15,112 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.footballapp.data.model.TableEntry
-import com.example.footballapp.ui.theme.*
+import com.example.footballapp.ui.theme.FormDraw
+import com.example.footballapp.ui.theme.FormLoss
+import com.example.footballapp.ui.theme.FormWin
+import com.example.footballapp.ui.theme.PrimaryGreen
 
 @Composable
-fun TableHeader() {
+fun TableRowItem(entry: TableEntry, isHeader: Boolean = false, isEven: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceDark)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("#", modifier = Modifier.width(28.dp), style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("Csapat", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("M", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("Gy", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("D", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("V", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("Gk", modifier = Modifier.width(36.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-        Text("P", modifier = Modifier.width(32.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = TextSecondary, fontWeight = FontWeight.Bold)
+        Text(
+            text = entry.intRank ?: "",
+            modifier = Modifier.width(28.dp),
+            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.SemiBold,
+            color = when {
+                isHeader -> MaterialTheme.colorScheme.onSurfaceVariant
+                (entry.intRank?.toIntOrNull() ?: 99) <= 4 -> PrimaryGreen
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+            textAlign = TextAlign.Center,
+            fontSize = 13.sp
+        )
+
+        if (!isHeader && !entry.strBadge.isNullOrBlank()) {
+            AsyncImage(
+                model = entry.strBadge,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        } else if (!isHeader) {
+            Spacer(modifier = Modifier.width(32.dp))
+        }
+
+        Text(
+            text = entry.strTeam ?: "",
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 13.sp
+        )
+
+        StatCell(entry.intPlayed ?: "P", isHeader)
+        StatCell(entry.intWin ?: "W", isHeader)
+        StatCell(entry.intDraw ?: "D", isHeader)
+        StatCell(entry.intLoss ?: "L", isHeader)
+        StatCell(entry.intGoalDifference ?: "GD", isHeader)
+        StatCell(entry.intPoints ?: "Pts", isHeader, bold = true)
+
+        if (!isHeader && !entry.strForm.isNullOrBlank()) {
+            Spacer(modifier = Modifier.width(6.dp))
+            FormIndicator(entry.strForm!!)
+        } else if (isHeader) {
+            Spacer(modifier = Modifier.width(40.dp))
+        }
     }
 }
 
 @Composable
-fun TableRowItem(entry: TableEntry, isEven: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isEven) CardDark else SurfaceDark)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = entry.intRank ?: "-",
-            modifier = Modifier.width(28.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary,
-            fontWeight = FontWeight.Bold
-        )
+private fun StatCell(text: String, isHeader: Boolean, bold: Boolean = false) {
+    Text(
+        text = text,
+        modifier = Modifier.width(28.dp),
+        textAlign = TextAlign.Center,
+        fontSize = 12.sp,
+        fontWeight = if (bold || isHeader) FontWeight.Bold else FontWeight.Normal,
+        color = if (isHeader) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onSurface
+    )
+}
 
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (!entry.strBadge.isNullOrBlank()) {
-                AsyncImage(
-                    model = entry.strBadge,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Fit
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+@Composable
+private fun FormIndicator(form: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        form.takeLast(5).forEach { c ->
+            val color = when (c.uppercaseChar()) {
+                'W' -> FormWin
+                'D' -> FormDraw
+                'L' -> FormLoss
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
-            Text(
-                text = entry.strTeam ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = c.toString(),
+                    fontSize = 8.sp,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
-
-        Text(entry.intPlayed ?: "-", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-        Text(entry.intWin ?: "-", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = WinGreen)
-        Text(entry.intDraw ?: "-", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = DrawGray)
-        Text(entry.intLoss ?: "-", modifier = Modifier.width(28.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = LossRed)
-        Text(entry.intGoalDifference ?: "-", modifier = Modifier.width(36.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-        Text(
-            text = entry.intPoints ?: "-",
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
-            color = PrimaryGreen,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
