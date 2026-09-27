@@ -1,12 +1,10 @@
 package com.example.footballapp.data.repository
 
 import com.example.footballapp.data.api.ApiClient
+import com.example.footballapp.data.cache.MatchCache
 import com.example.footballapp.data.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 class SportsRepository {
 
@@ -21,11 +19,16 @@ class SportsRepository {
         const val CHAMPIONS_LEAGUE = "CL"
     }
 
-    /** Egy konkrét nap meccsei egy ligában */
     suspend fun getMatchesForDate(
         competitionCode: String,
-        date: String
+        date: String,
+        forceRefresh: Boolean = false
     ): Result<List<Event>> = withContext(Dispatchers.IO) {
+        if (!forceRefresh) {
+            MatchCache.get(competitionCode, date)?.let {
+                return@withContext Result.success(it)
+            }
+        }
         try {
             val response = api.getCompetitionMatches(
                 competitionCode = competitionCode,
@@ -36,38 +39,13 @@ class SportsRepository {
                 ?.map { it.toEvent() }
                 ?.sortedBy { it.strTime ?: "99:99" }
                 ?: emptyList()
+            MatchCache.put(competitionCode, date, events)
             Result.success(events)
         } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getMatchesGroupedByDate(
-        competitionCode: String,
-        pastDays: Int = 7,
-        futureDays: Int = 21
-    ): Result<Map<String, List<Event>>> = withContext(Dispatchers.IO) {
-        try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val calendar = Calendar.getInstance()
-            calendar.add(Calendar.DAY_OF_YEAR, -pastDays)
-            val dateFrom = dateFormat.format(calendar.time)
-            calendar.add(Calendar.DAY_OF_YEAR, pastDays + futureDays)
-            val dateTo = dateFormat.format(calendar.time)
-
-            val response = api.getCompetitionMatches(
-                competitionCode = competitionCode,
-                dateFrom = dateFrom,
-                dateTo = dateTo
-            )
-            val events = response.matches?.map { it.toEvent() } ?: emptyList()
-            val grouped = events
-                .filter { !it.dateEvent.isNullOrBlank() }
-                .groupBy { it.dateEvent!! }
-                .mapValues { (_, list) -> list.sortedBy { it.strTime ?: "99:99" } }
-                .toSortedMap()
-            Result.success(grouped)
-        } catch (e: Exception) {
+            // Offline fallback
+            MatchCache.get(competitionCode, date)?.let {
+                return@withContext Result.success(it)
+            }
             Result.failure(e)
         }
     }
@@ -90,8 +68,7 @@ class SportsRepository {
     suspend fun getTeamsInLeague(competitionCode: String = PREMIER_LEAGUE): Result<List<Team>> =
         withContext(Dispatchers.IO) {
             try {
-                val response = api.getTeams(competitionCode)
-                Result.success(response.teams?.map { it.toTeam() } ?: emptyList())
+                Result.success(api.getTeams(competitionCode).teams?.map { it.toTeam() } ?: emptyList())
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -134,11 +111,14 @@ class SportsRepository {
         }
     }
 
-    suspend fun getNextLeagueEvents(leagueId: String): Result<List<Event>> =
-        getMatchesGroupedByDate(leagueId, pastDays = 0, futureDays = 14)
-            .map { it.values.flatten() }
-
-    suspend fun getPastLeagueEvents(leagueId: String): Result<List<Event>> =
-        getMatchesGroupedByDate(leagueId, pastDays = 14, futureDays = 0)
-            .map { it.values.flatten() }
+    suspend fun getMatch(matchId: String): Result<Event?> = withContext(Dispatchers.IO) {
+        try {
+            // football-data.org: /matches/{id}
+            val id = matchId.toIntOrNull() ?: return@withContext Result.success(null)
+            val response = api.getMatch(id)
+            Result.success(response.toEvent())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
