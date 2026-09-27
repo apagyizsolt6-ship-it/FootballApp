@@ -13,164 +13,47 @@ class SportsRepository {
     private val api = ApiClient.api
 
     companion object {
-        const val PREMIER_LEAGUE = "4328"
-        const val LA_LIGA = "4335"
-        const val SERIE_A = "4332"
-        const val BUNDESLIGA = "4331"
-        const val LIGUE_1 = "4334"
-        const val CHAMPIONS_LEAGUE = "4480"
+        // football-data.org competition codes
+        const val PREMIER_LEAGUE = "PL"
+        const val LA_LIGA = "PD"
+        const val SERIE_A = "SA"
+        const val BUNDESLIGA = "BL1"
+        const val LIGUE_1 = "FL1"
+        const val CHAMPIONS_LEAGUE = "CL"
     }
-
-    suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.searchTeams(query)
-            Result.success(response.teams ?: emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getTeam(teamId: String): Result<Team?> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.lookupTeam(teamId)
-            Result.success(response.teams?.firstOrNull())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getNextEvents(teamId: String): Result<List<Event>> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.getNextEvents(teamId)
-            Result.success(response.events ?: emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getLastEvents(teamId: String): Result<List<Event>> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.getLastEvents(teamId)
-            Result.success(response.events ?: emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getNextLeagueEvents(leagueId: String = PREMIER_LEAGUE): Result<List<Event>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getNextLeagueEvents(leagueId)
-                Result.success(response.events ?: emptyList())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-
-    suspend fun getPastLeagueEvents(leagueId: String = PREMIER_LEAGUE): Result<List<Event>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getPastLeagueEvents(leagueId)
-                Result.success(response.events ?: emptyList())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-
-    suspend fun getLeagueTable(leagueId: String = PREMIER_LEAGUE, season: String? = null): Result<List<TableEntry>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getLeagueTable(leagueId, season)
-                Result.success(response.table ?: emptyList())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-
-    suspend fun searchPlayers(query: String): Result<List<Player>> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.searchPlayers(query)
-            Result.success(response.player ?: emptyList())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getPlayer(playerId: String): Result<Player?> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.lookupPlayer(playerId)
-            Result.success(response.player?.firstOrNull())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getTeamsInLeague(leagueName: String = "English_Premier_League"): Result<List<Team>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getTeamsInLeague(leagueName)
-                Result.success(response.teams ?: emptyList())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-
-    suspend fun getEventsByDay(date: String, leagueId: String? = null): Result<List<Event>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getEventsByDay(date, "Soccer", leagueId)
-                Result.success(response.events ?: emptyList())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
 
     /**
-     * Naptár: next + past meccseket dátum szerint csoportosít.
-     * Emellett megpróbálja a napi endpointot is a következő napokra.
+     * Naptár nézet: meccsek dátum szerint csoportosítva.
+     * dateFrom = ma - 7 nap, dateTo = ma + 21 nap
      */
     suspend fun getMatchesGroupedByDate(
-        leagueId: String,
-        extraDays: Int = 14
+        competitionCode: String,
+        pastDays: Int = 7,
+        futureDays: Int = 21
     ): Result<Map<String, List<Event>>> = withContext(Dispatchers.IO) {
         try {
-            val allEvents = mutableListOf<Event>()
-
-            // 1. Next + Past (ezek megbízhatóbbak a free kulccsal)
-            try {
-                val next = api.getNextLeagueEvents(leagueId).events ?: emptyList()
-                allEvents.addAll(next)
-            } catch (_: Exception) {}
-
-            try {
-                val past = api.getPastLeagueEvents(leagueId).events ?: emptyList()
-                allEvents.addAll(past)
-            } catch (_: Exception) {}
-
-            // 2. Extra napok a napi endpointból (ha van adat)
-            val calendar = Calendar.getInstance()
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            // Kezdjünk 5 nappal ezelőtt
-            calendar.add(Calendar.DAY_OF_YEAR, -5)
+            val calendar = Calendar.getInstance()
 
-            for (i in 0 until (extraDays + 5)) {
-                val date = dateFormat.format(calendar.time)
-                try {
-                    val dayEvents = api.getEventsByDay(date, "Soccer", leagueId).events ?: emptyList()
-                    allEvents.addAll(dayEvents)
-                } catch (_: Exception) {}
-                calendar.add(Calendar.DAY_OF_YEAR, 1)
-            }
+            calendar.add(Calendar.DAY_OF_YEAR, -pastDays)
+            val dateFrom = dateFormat.format(calendar.time)
 
-            // Egyedi meccsek (idEvent alapján)
-            val unique = allEvents
-                .filter { !it.idEvent.isNullOrBlank() }
-                .distinctBy { it.idEvent }
-                .filter { it.idLeague == leagueId || it.idLeague == null }
+            calendar.add(Calendar.DAY_OF_YEAR, pastDays + futureDays)
+            val dateTo = dateFormat.format(calendar.time)
 
-            // Csoportosítás dátum szerint
-            val grouped = unique
-                .groupBy { it.dateEvent ?: "Ismeretlen" }
+            val response = api.getCompetitionMatches(
+                competitionCode = competitionCode,
+                dateFrom = dateFrom,
+                dateTo = dateTo
+            )
+
+            val events = response.matches
+                ?.map { it.toEvent() }
+                ?: emptyList()
+
+            val grouped = events
+                .filter { !it.dateEvent.isNullOrBlank() }
+                .groupBy { it.dateEvent!! }
                 .mapValues { (_, list) ->
                     list.sortedBy { it.strTime ?: "99:99" }
                 }
@@ -181,4 +64,80 @@ class SportsRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun getLeagueTable(competitionCode: String = PREMIER_LEAGUE): Result<List<TableEntry>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getStandings(competitionCode)
+                val totalTable = response.standings
+                    ?.firstOrNull { it.type == "TOTAL" }
+                    ?.table
+                    ?: response.standings?.firstOrNull()?.table
+                    ?: emptyList()
+
+                Result.success(totalTable.map { it.toTableEntry() })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getTeamsInLeague(competitionCode: String = PREMIER_LEAGUE): Result<List<Team>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getTeams(competitionCode)
+                Result.success(response.teams?.map { it.toTeam() } ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getTeam(teamId: String): Result<Team?> = withContext(Dispatchers.IO) {
+        try {
+            val id = teamId.toIntOrNull() ?: return@withContext Result.success(null)
+            val team = api.getTeam(id)
+            Result.success(team.toTeam())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getTeamMatches(teamId: String, status: String? = null): Result<List<Event>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val id = teamId.toIntOrNull() ?: return@withContext Result.success(emptyList())
+                val response = api.getTeamMatches(id, status = status, limit = 20)
+                Result.success(response.matches?.map { it.toEvent() } ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    // Keresés – football-data.org-on nincs szabad szöveges keresés,
+    // ezért a liga csapataiból szűrünk
+    suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
+        try {
+            val all = mutableListOf<Team>()
+            listOf(PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1).forEach { code ->
+                try {
+                    val teams = api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList()
+                    all.addAll(teams)
+                } catch (_: Exception) {}
+            }
+            val filtered = all
+                .distinctBy { it.idTeam }
+                .filter { it.strTeam?.contains(query, ignoreCase = true) == true }
+            Result.success(filtered)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Régi kompatibilitás (ha valahol még hívják)
+    suspend fun getNextLeagueEvents(leagueId: String): Result<List<Event>> =
+        getMatchesGroupedByDate(leagueId, pastDays = 0, futureDays = 14)
+            .map { it.values.flatten() }
+
+    suspend fun getPastLeagueEvents(leagueId: String): Result<List<Event>> =
+        getMatchesGroupedByDate(leagueId, pastDays = 14, futureDays = 0)
+            .map { it.values.flatten() }
 }
