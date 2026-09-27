@@ -14,7 +14,7 @@ object ApiClient {
      * 2. Regisztrálj (ingyenes)
      * 3. A kapott tokent írd be ide:
      */
-    private const val API_TOKEN = "b429d8a5da2345449573583e29ecff12"   // ← CSERÉLD KI!
+    private const val API_TOKEN = "YOUR_API_TOKEN_HERE"   // ← CSERÉLD KI!
 
     private const val BASE_URL = "https://api.football-data.org/v4/"
 
