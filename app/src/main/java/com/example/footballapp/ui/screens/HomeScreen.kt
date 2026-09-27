@@ -78,101 +78,51 @@ fun HomeScreen(
                     CircularProgressIndicator(color = PrimaryGreen)
                 }
             }
-            uiState.error != null && uiState.matchesByDate.isEmpty() &&
-                    uiState.nextMatches.isEmpty() && uiState.recentMatches.isEmpty() -> {
+            uiState.matchesByDate.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Hiba: ${uiState.error}\n(Ingyenes kulcs korlátozott lehet)",
-                        color = TextSecondary,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = uiState.error ?: "Nincs elérhető meccs",
+                            color = TextSecondary,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Text(
+                            text = "Tipp: cseréld ki az API kulcsot sajátra\naz ApiClient.kt-ben",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
             }
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    // ===== NAPTÁR NÉZET (napi bontás) =====
-                    if (uiState.matchesByDate.isNotEmpty()) {
-                        val sortedDates = uiState.matchesByDate.keys.sorted()
+                    // NAPTÁR NÉZET – dátum szerint
+                    val sortedDates = uiState.matchesByDate.keys.sorted()
 
-                        sortedDates.forEach { date ->
-                            val events = uiState.matchesByDate[date] ?: emptyList()
-                            if (events.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = formatHungarianDate(date),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = PrimaryGreen,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            top = 20.dp,
-                                            bottom = 8.dp
-                                        )
+                    sortedDates.forEach { date ->
+                        val events = uiState.matchesByDate[date] ?: emptyList()
+                        if (events.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = formatHungarianDate(date),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryGreen,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(
+                                        start = 16.dp,
+                                        top = 20.dp,
+                                        bottom = 8.dp
                                     )
-                                }
-                                items(events) { event ->
-                                    MatchCard(event = event)
-                                }
-                            }
-                        }
-                    } else {
-                        // ===== FALLBACK: régi next + recent =====
-                        item {
-                            Text(
-                                text = "Következő mérkőzések",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = TextPrimary,
-                                modifier = Modifier.padding(
-                                    start = 16.dp,
-                                    top = 16.dp,
-                                    bottom = 8.dp
-                                )
-                            )
-                        }
-
-                        if (uiState.nextMatches.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "Nincs közelgő mérkőzés",
-                                    color = TextSecondary,
-                                    modifier = Modifier.padding(16.dp)
                                 )
                             }
-                        } else {
-                            items(uiState.nextMatches.take(15)) { event ->
-                                MatchCard(event = event)
-                            }
-                        }
-
-                        item {
-                            Text(
-                                text = "Legutóbbi eredmények",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = TextPrimary,
-                                modifier = Modifier.padding(
-                                    start = 16.dp,
-                                    top = 24.dp,
-                                    bottom = 8.dp
-                                )
-                            )
-                        }
-
-                        if (uiState.recentMatches.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "Nincs friss eredmény",
-                                    color = TextSecondary,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
-                        } else {
-                            items(uiState.recentMatches.take(15)) { event ->
+                            items(events, key = { it.idEvent ?: it.hashCode().toString() }) { event ->
                                 MatchCard(event = event)
                             }
                         }
@@ -183,9 +133,6 @@ fun HomeScreen(
     }
 }
 
-/**
- * yyyy-MM-dd → "2026. október 10." formátum
- */
 private fun formatHungarianDate(date: String): String {
     return try {
         val input = SimpleDateFormat("yyyy-MM-dd", Locale.US)
