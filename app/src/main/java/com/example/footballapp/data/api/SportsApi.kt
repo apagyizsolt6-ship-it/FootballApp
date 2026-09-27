@@ -2,82 +2,53 @@ package com.example.footballapp.data.api
 
 import com.example.footballapp.data.model.*
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface SportsApi {
 
-    // Search teams by name
-    @GET("searchteams.php")
-    suspend fun searchTeams(
-        @Query("t") teamName: String
-    ): TeamResponse
+    // Meccsek egy ligában (dátum szűréssel)
+    @GET("competitions/{code}/matches")
+    suspend fun getCompetitionMatches(
+        @Path("code") competitionCode: String,
+        @Query("dateFrom") dateFrom: String? = null,
+        @Query("dateTo") dateTo: String? = null,
+        @Query("status") status: String? = null,
+        @Query("matchday") matchday: Int? = null
+    ): MatchesResponse
 
-    // Lookup team by ID
-    @GET("lookupteam.php")
-    suspend fun lookupTeam(
-        @Query("id") teamId: String
-    ): TeamResponse
+    // Tabella
+    @GET("competitions/{code}/standings")
+    suspend fun getStandings(
+        @Path("code") competitionCode: String
+    ): StandingsResponse
 
-    // Next events for a team
-    @GET("eventsnext.php")
-    suspend fun getNextEvents(
-        @Query("id") teamId: String
-    ): EventResponse
+    // Csapatok egy ligában
+    @GET("competitions/{code}/teams")
+    suspend fun getTeams(
+        @Path("code") competitionCode: String
+    ): TeamsResponse
 
-    // Last events for a team
-    @GET("eventslast.php")
-    suspend fun getLastEvents(
-        @Query("id") teamId: String
-    ): EventResponse
+    // Egy csapat meccsei
+    @GET("teams/{id}/matches")
+    suspend fun getTeamMatches(
+        @Path("id") teamId: Int,
+        @Query("status") status: String? = null,
+        @Query("limit") limit: Int? = 20
+    ): MatchesResponse
 
-    // Next events for a league
-    @GET("eventsnextleague.php")
-    suspend fun getNextLeagueEvents(
-        @Query("id") leagueId: String
-    ): EventResponse
+    // Csapat keresés / részletek
+    @GET("teams/{id}")
+    suspend fun getTeam(
+        @Path("id") teamId: Int
+    ): FdTeam
 
-    // Past events for a league
-    @GET("eventspastleague.php")
-    suspend fun getPastLeagueEvents(
-        @Query("id") leagueId: String
-    ): EventResponse
-
-    // League table
-    @GET("lookuptable.php")
-    suspend fun getLeagueTable(
-        @Query("l") leagueId: String,
-        @Query("s") season: String? = null
-    ): TableResponse
-
-    // Search players
-    @GET("searchplayers.php")
-    suspend fun searchPlayers(
-        @Query("p") playerName: String
-    ): PlayerResponse
-
-    // Lookup player
-    @GET("lookupplayer.php")
-    suspend fun lookupPlayer(
-        @Query("id") playerId: String
-    ): PlayerResponse
-
-    // All teams in a league
-    @GET("search_all_teams.php")
-    suspend fun getTeamsInLeague(
-        @Query("l") leagueName: String
-    ): TeamResponse
-
-    // Events by day (with optional league filter)
-    @GET("eventsday.php")
-    suspend fun getEventsByDay(
-        @Query("d") date: String,
-        @Query("s") sport: String? = "Soccer",
-        @Query("l") leagueId: String? = null
-    ): EventResponse
-
-    // Lookup event
-    @GET("lookupevent.php")
-    suspend fun lookupEvent(
-        @Query("id") eventId: String
-    ): EventResponse
+    // Mai / dátum szerinti meccsek (több liga)
+    @GET("matches")
+    suspend fun getMatches(
+        @Query("competitions") competitions: String? = null,
+        @Query("dateFrom") dateFrom: String? = null,
+        @Query("dateTo") dateTo: String? = null,
+        @Query("status") status: String? = null
+    ): MatchesResponse
 }
