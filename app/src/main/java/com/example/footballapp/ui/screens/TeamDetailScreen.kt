@@ -1,185 +1,187 @@
 package com.example.footballapp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.footballapp.data.model.MatchStatus
-import com.example.footballapp.viewmodel.MatchDetailViewModel
+import coil.compose.AsyncImage
+import com.example.footballapp.ui.components.MatchCard
+import com.example.footballapp.ui.theme.PrimaryGreen
+import com.example.footballapp.ui.theme.TextPrimary
+import com.example.footballapp.ui.theme.TextSecondary
+import com.example.footballapp.viewmodel.TeamDetailViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchDetailScreen(
-    matchId: String,
-    onBackClick: () -> Unit,
-    viewModel: MatchDetailViewModel = viewModel()
+fun TeamDetailScreen(
+    teamId: String,
+    onBack: () -> Unit,
+    viewModel: TeamDetailViewModel = viewModel()
 ) {
-    val match by viewModel.match.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0F1222))
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Vissza", tint = Color.White)
-            }
-            Text(
-                text = "Mérkőzés részletei",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = { viewModel.toggleFavorite() }) {
-                Icon(
-                    imageVector = if (match?.isFavorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Kedvenc",
-                    tint = if (match?.isFavorite == true) Color.Red else Color.White
+    LaunchedEffect(teamId) {
+        viewModel.loadTeam(teamId)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(uiState.team?.strTeam ?: "Csapat") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Vissza")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
                 )
-            }
+            )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        match?.let { m ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2235))
+    ) { padding ->
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(text = m.league, color = Color.Gray, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "${m.date} • ${m.time}", color = Color.Gray, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                CircularProgressIndicator(color = PrimaryGreen)
+            }
+        } else if (uiState.team == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Csapat nem található", color = TextSecondary)
+            }
+        } else {
+            val team = uiState.team!!
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // Header with badge
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = m.homeTeam,
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+                        AsyncImage(
+                            model = team.strTeamBadge,
+                            contentDescription = team.strTeam,
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Fit
                         )
-
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = if (m.status == MatchStatus.UPCOMING) "VS" else "${m.homeScore ?: 0} - ${m.awayScore ?: 0}",
-                            color = Color(0xFF00C853),
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            text = team.strTeam ?: "",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
                         )
-
                         Text(
-                            text = m.awayTeam,
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                            text = "${team.strLeague ?: ""} • ${team.strCountry ?: ""}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                        if (!team.strStadium.isNullOrBlank()) {
+                            Text(
+                                text = "Stadion: ${team.strStadium}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Description
+                if (!team.strDescriptionEN.isNullOrBlank()) {
+                    item {
+                        Text(
+                            text = "Leírás",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        Text(
+                            text = team.strDescriptionEN.take(400) + if ((team.strDescriptionEN?.length ?: 0) > 400) "..." else "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = "Helyszín: ${m.venue}", color = Color.LightGray, fontSize = 13.sp)
+                }
+
+                // Next matches
+                item {
+                    Text(
+                        text = "Következő mérkőzések",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+                    )
+                }
+                if (uiState.nextEvents.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Nincs közelgő mérkőzés",
+                            color = TextSecondary,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else {
+                    items(uiState.nextEvents) { event ->
+                        MatchCard(event = event)
+                    }
+                }
+
+                // Last matches
+                item {
+                    Text(
+                        text = "Legutóbbi mérkőzések",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+                    )
+                }
+                if (uiState.lastEvents.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Nincs friss mérkőzés",
+                            color = TextSecondary,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else {
+                    items(uiState.lastEvents) { event ->
+                        MatchCard(event = event)
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Statisztikák",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            StatBar(
-                label = "Labdabirtoklás",
-                homeValue = "${m.homePossession}%",
-                awayValue = "${m.awayPossession}%",
-                progress = m.homePossession / 100f
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            StatBar(
-                label = "Kapura lövés",
-                homeValue = "${m.shotsOnTargetHome}",
-                awayValue = "${m.shotsOnTargetAway}",
-                progress = if (m.shotsOnTargetHome + m.shotsOnTargetAway > 0)
-                    m.shotsOnTargetHome.toFloat() / (m.shotsOnTargetHome + m.shotsOnTargetAway).toFloat()
-                else 0.5f
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { /* Értesítés / Emlékeztető logika */ },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
-            ) {
-                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.Black)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Értesítés küldése a meccsről", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun StatBar(label: String, homeValue: String, awayValue: String, progress: Float) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2235))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = homeValue, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(text = label, color = Color.Gray, fontSize = 14.sp)
-                Text(text = awayValue, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
-                color = Color(0xFF00C853),
-                trackColor = Color(0xFF2E3B55)
-            )
         }
     }
 }
