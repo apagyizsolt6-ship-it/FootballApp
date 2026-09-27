@@ -33,9 +33,7 @@ fun TeamCard(
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = CardDark
-        )
+        colors = CardDefaults.cardColors(containerColor = CardDark)
     ) {
         Row(
             modifier = Modifier
@@ -54,27 +52,28 @@ fun TeamCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = team.strTeam ?: "Ismeretlen csapat",
+                    text = team.strTeam ?: "Unknown",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                if (!team.strCountry.isNullOrBlank()) {
-                    Text(
-                        text = team.strCountry,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = buildString {
+                        append(team.strLeague ?: "")
+                        if (!team.strCountry.isNullOrBlank()) {
+                            append(" • ")
+                            append(team.strCountry)
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
