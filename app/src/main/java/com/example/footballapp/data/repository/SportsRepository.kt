@@ -13,7 +13,6 @@ class SportsRepository {
     private val api = ApiClient.api
 
     companion object {
-        // football-data.org competition codes
         const val PREMIER_LEAGUE = "PL"
         const val LA_LIGA = "PD"
         const val SERIE_A = "SA"
@@ -22,10 +21,27 @@ class SportsRepository {
         const val CHAMPIONS_LEAGUE = "CL"
     }
 
-    /**
-     * Naptár nézet: meccsek dátum szerint csoportosítva.
-     * dateFrom = ma - 7 nap, dateTo = ma + 21 nap
-     */
+    /** Egy konkrét nap meccsei egy ligában */
+    suspend fun getMatchesForDate(
+        competitionCode: String,
+        date: String
+    ): Result<List<Event>> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getCompetitionMatches(
+                competitionCode = competitionCode,
+                dateFrom = date,
+                dateTo = date
+            )
+            val events = response.matches
+                ?.map { it.toEvent() }
+                ?.sortedBy { it.strTime ?: "99:99" }
+                ?: emptyList()
+            Result.success(events)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getMatchesGroupedByDate(
         competitionCode: String,
         pastDays: Int = 7,
@@ -34,10 +50,8 @@ class SportsRepository {
         try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
             val calendar = Calendar.getInstance()
-
             calendar.add(Calendar.DAY_OF_YEAR, -pastDays)
             val dateFrom = dateFormat.format(calendar.time)
-
             calendar.add(Calendar.DAY_OF_YEAR, pastDays + futureDays)
             val dateTo = dateFormat.format(calendar.time)
 
@@ -46,19 +60,12 @@ class SportsRepository {
                 dateFrom = dateFrom,
                 dateTo = dateTo
             )
-
-            val events = response.matches
-                ?.map { it.toEvent() }
-                ?: emptyList()
-
+            val events = response.matches?.map { it.toEvent() } ?: emptyList()
             val grouped = events
                 .filter { !it.dateEvent.isNullOrBlank() }
                 .groupBy { it.dateEvent!! }
-                .mapValues { (_, list) ->
-                    list.sortedBy { it.strTime ?: "99:99" }
-                }
+                .mapValues { (_, list) -> list.sortedBy { it.strTime ?: "99:99" } }
                 .toSortedMap()
-
             Result.success(grouped)
         } catch (e: Exception) {
             Result.failure(e)
@@ -74,7 +81,6 @@ class SportsRepository {
                     ?.table
                     ?: response.standings?.firstOrNull()?.table
                     ?: emptyList()
-
                 Result.success(totalTable.map { it.toTableEntry() })
             } catch (e: Exception) {
                 Result.failure(e)
@@ -94,8 +100,7 @@ class SportsRepository {
     suspend fun getTeam(teamId: String): Result<Team?> = withContext(Dispatchers.IO) {
         try {
             val id = teamId.toIntOrNull() ?: return@withContext Result.success(null)
-            val team = api.getTeam(id)
-            Result.success(team.toTeam())
+            Result.success(api.getTeam(id).toTeam())
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -112,27 +117,23 @@ class SportsRepository {
             }
         }
 
-    // Keresés – football-data.org-on nincs szabad szöveges keresés,
-    // ezért a liga csapataiból szűrünk
     suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
         try {
             val all = mutableListOf<Team>()
             listOf(PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1).forEach { code ->
                 try {
-                    val teams = api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList()
-                    all.addAll(teams)
+                    all.addAll(api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList())
                 } catch (_: Exception) {}
             }
-            val filtered = all
-                .distinctBy { it.idTeam }
-                .filter { it.strTeam?.contains(query, ignoreCase = true) == true }
-            Result.success(filtered)
+            Result.success(
+                all.distinctBy { it.idTeam }
+                    .filter { it.strTeam?.contains(query, ignoreCase = true) == true }
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Régi kompatibilitás (ha valahol még hívják)
     suspend fun getNextLeagueEvents(leagueId: String): Result<List<Event>> =
         getMatchesGroupedByDate(leagueId, pastDays = 0, futureDays = 14)
             .map { it.values.flatten() }
