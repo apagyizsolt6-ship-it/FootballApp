@@ -2,57 +2,57 @@ package com.example.footballapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.footballapp.data.model.MatchFilter
-import com.example.footballapp.data.model.MatchStatus
+import com.example.footballapp.data.model.Event
 import com.example.footballapp.data.repository.SportsRepository
-import kotlinx.coroutines.flow.*
-import java.time.LocalDate
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class HomeUiState(
+    val isLoading: Boolean = false,
+    val matchesByDate: Map<String, List<Event>> = emptyMap(),
+    val error: String? = null,
+    val selectedLeagueId: String = SportsRepository.PREMIER_LEAGUE
+)
 
 class HomeViewModel(
     private val repository: SportsRepository = SportsRepository()
 ) : ViewModel() {
 
-    private val _selectedLeague = MutableStateFlow("Premier League")
-    val selectedLeague = _selectedLeague.asStateFlow()
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now().toString())
-    val selectedDate = _selectedDate.asStateFlow()
+    init {
+        loadMatches()
+    }
 
-    private val _selectedFilter = MutableStateFlow(MatchFilter.ALL)
-    val selectedFilter = _selectedFilter.asStateFlow()
+    fun loadMatches(leagueId: String = _uiState.value.selectedLeagueId) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                selectedLeagueId = leagueId
+            )
 
-    val matches = combine(
-        repository.matches,
-        _selectedLeague,
-        _selectedDate,
-        _selectedFilter
-    ) { allMatches, league, date, filter ->
-        allMatches.filter { match ->
-            val matchesLeague = match.league.equals(league, ignoreCase = true)
-            val matchesDate = match.date == date
-            val matchesFilter = when (filter) {
-                MatchFilter.ALL -> true
-                MatchFilter.LIVE -> match.status == MatchStatus.LIVE
-                MatchFilter.FINISHED -> match.status == MatchStatus.FINISHED
-                MatchFilter.UPCOMING -> match.status == MatchStatus.UPCOMING
-            }
-            matchesLeague && matchesDate && matchesFilter
+            val result = repository.getMatchesGroupedByDate(
+                competitionCode = leagueId,
+                pastDays = 7,
+                futureDays = 21
+            )
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                matchesByDate = result.getOrDefault(emptyMap()),
+                error = if (result.isFailure || result.getOrDefault(emptyMap()).isEmpty()) {
+                    result.exceptionOrNull()?.message
+                        ?: "Nincs meccs. Ellenőrizd az API tokent az ApiClient.kt-ben!"
+                } else null
+            )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun selectLeague(league: String) {
-        _selectedLeague.value = league
     }
 
-    fun selectDate(date: String) {
-        _selectedDate.value = date
-    }
-
-    fun setFilter(filter: MatchFilter) {
-        _selectedFilter.value = filter
-    }
-
-    fun toggleFavorite(matchId: String) {
-        repository.toggleFavorite(matchId)
+    fun selectLeague(leagueId: String) {
+        loadMatches(leagueId)
     }
 }
