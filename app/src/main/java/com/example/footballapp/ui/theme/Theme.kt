@@ -12,36 +12,41 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColors = darkColorScheme(
-    primary = PrimaryGreen,
-    onPrimary = Color.White,
-    secondary = PrimaryGreenDark,
-    background = BackgroundDark,
-    surface = SurfaceDark,
-    onBackground = TextPrimaryDark,
-    onSurface = TextPrimaryDark,
-    surfaceVariant = CardDark,
-    onSurfaceVariant = TextSecondaryDark
-)
-
-private val LightColors = lightColorScheme(
-    primary = PrimaryGreen,
-    onPrimary = Color.White,
-    secondary = PrimaryGreenDark,
-    background = BackgroundLight,
-    surface = SurfaceLight,
-    onBackground = TextPrimaryLight,
-    onSurface = TextPrimaryLight,
-    surfaceVariant = CardLight,
-    onSurfaceVariant = TextSecondaryLight
-)
-
 @Composable
 fun FootballAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    accentKey: String = "green",
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkColors else LightColors
+    val primary = accentPrimary(accentKey)
+    val secondary = accentSecondary(accentKey)
+
+    val colors = if (darkTheme) {
+        darkColorScheme(
+            primary = primary,
+            onPrimary = Color.White,
+            secondary = secondary,
+            background = BackgroundDark,
+            surface = SurfaceDark,
+            onBackground = TextPrimaryDark,
+            onSurface = TextPrimaryDark,
+            surfaceVariant = CardDark,
+            onSurfaceVariant = TextSecondaryDark
+        )
+    } else {
+        lightColorScheme(
+            primary = primary,
+            onPrimary = Color.White,
+            secondary = secondary,
+            background = BackgroundLight,
+            surface = SurfaceLight,
+            onBackground = TextPrimaryLight,
+            onSurface = TextPrimaryLight,
+            surfaceVariant = CardLight,
+            onSurfaceVariant = TextSecondaryLight
+        )
+    }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
