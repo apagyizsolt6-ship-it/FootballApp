@@ -13,6 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.MatchCard
 import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.viewmodel.HomeViewModel
@@ -36,7 +40,12 @@ fun HomeScreen(
     isDarkTheme: Boolean = true,
     onToggleTheme: () -> Unit = {},
     onMatchClick: (String) -> Unit = {},
-    viewModel: HomeViewModel = viewModel()
+    onSettingsClick: () -> Unit = {},
+    prefs: AppPreferences? = null,
+    viewModel: HomeViewModel = viewModel {
+        // prefs átadása ha lehetséges – egyszerű factory helyett default
+        HomeViewModel(prefs = prefs)
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -44,7 +53,7 @@ fun HomeScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 8.dp),
+                .padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -54,8 +63,19 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
+            // Kedvencek szűrő
+            IconButton(onClick = { viewModel.setShowOnlyFavorites(!uiState.showOnlyFavorites) }) {
+                Icon(
+                    imageVector = if (uiState.showOnlyFavorites) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    contentDescription = "Csak kedvencek",
+                    tint = if (uiState.showOnlyFavorites) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             IconButton(onClick = { viewModel.refresh() }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Frissítés", tint = PrimaryGreen)
+            }
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Default.Settings, contentDescription = "Beállítások", tint = PrimaryGreen)
             }
             IconButton(onClick = onToggleTheme) {
                 Icon(
@@ -66,7 +86,16 @@ fun HomeScreen(
             }
         }
 
-        // Vízszintes 15 napos naptár
+        if (uiState.lastRefreshTime != null) {
+            Text(
+                text = "Frissítve: ${uiState.lastRefreshTime}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+            )
+        }
+
+        // Dátumválasztó
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -83,6 +112,28 @@ fun HomeScreen(
             }
         }
 
+        // Liga szűrő chip-ek (kompakt)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AppPreferences.ALL_LEAGUES.forEach { (code, name) ->
+                val selected = code in uiState.selectedLeagueCodes
+                FilterChip(
+                    selected = selected,
+                    onClick = { viewModel.toggleLeagueFilter(code) },
+                    label = { Text(name, style = MaterialTheme.typography.labelMedium) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = PrimaryGreen,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+        }
+
         when {
             uiState.isLoading || uiState.isRefreshing -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -91,10 +142,18 @@ fun HomeScreen(
             }
             uiState.leaguesForDay.isEmpty() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = uiState.error ?: "Nincs meccs ezen a napon",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = uiState.error ?: "Nincs meccs ezen a napon",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        if (uiState.showOnlyFavorites) {
+                            TextButton(onClick = { viewModel.setShowOnlyFavorites(false) }) {
+                                Text("Összes meccs mutatása")
+                            }
+                        }
+                    }
                 }
             }
             else -> {
@@ -129,53 +188,44 @@ fun HomeScreen(
 }
 
 @Composable
-private fun DayChip(date: String, selected: Boolean, onClick: () -> Unit) {
-    val (dayName, dayNum, month) = formatDayChip(date)
-    val shape = RoundedCornerShape(12.dp)
+private fun DayChip(
+    date: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val cal = Calendar.getInstance()
+    try {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)?.let { cal.time = it }
+    } catch (_: Exception) {}
+    val dayName = SimpleDateFormat("EEE", Locale("hu")).format(cal.time)
+    val dayNum = SimpleDateFormat("d", Locale.US).format(cal.time)
+    val month = SimpleDateFormat("MMM", Locale("hu")).format(cal.time)
+
     Column(
         modifier = Modifier
-            .width(56.dp)
-            .clip(shape)
+            .clip(RoundedCornerShape(12.dp))
             .background(
-                if (selected) PrimaryGreen.copy(alpha = 0.2f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                if (selected) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
-            .then(if (selected) Modifier.border(2.dp, PrimaryGreen, shape) else Modifier)
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = dayName,
+            text = dayName.replaceFirstChar { it.uppercase() },
             fontSize = 11.sp,
-            color = if (selected) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = dayNum,
-            fontSize = 18.sp,
-            color = if (selected) PrimaryGreen else MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = month,
             fontSize = 10.sp,
-            color = if (selected) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (selected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-private fun formatDayChip(date: String): Triple<String, String, String> {
-    return try {
-        val input = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val parsed = input.parse(date) ?: return Triple("", date, "")
-        val cal = Calendar.getInstance().apply { time = parsed }
-        val dayNames = arrayOf("Va", "Hé", "Ke", "Sze", "Csü", "Pé", "Szo")
-        val dayName = dayNames[cal.get(Calendar.DAY_OF_WEEK) - 1]
-        val dayNum = cal.get(Calendar.DAY_OF_MONTH).toString()
-        val month = SimpleDateFormat("MMM", Locale("hu", "HU")).format(parsed).replace(".", "")
-        Triple(dayName, dayNum, month)
-    } catch (_: Exception) {
-        Triple("", date.takeLast(2), "")
     }
 }
