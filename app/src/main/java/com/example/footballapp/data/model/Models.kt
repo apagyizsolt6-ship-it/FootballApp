@@ -65,6 +65,7 @@ data class StandingsResponse(
 data class StandingGroup(
     @SerializedName("stage") val stage: String? = null,
     @SerializedName("type") val type: String? = null, // TOTAL, HOME, AWAY
+    @SerializedName("group") val group: String? = null, // GROUP_A, GROUP_B stb.
     @SerializedName("table") val table: List<FdTableEntry>? = null
 )
 
@@ -211,3 +212,55 @@ data class EventResponse(val events: List<Event>? = null)
 data class TableResponse(val table: List<TableEntry>? = null)
 data class PlayerResponse(val player: List<Player>? = null)
 data class Player(val idPlayer: String? = null, val strPlayer: String? = null)
+
+// ========== Scorers ==========
+data class ScorersResponse(
+    @SerializedName("scorers") val scorers: List<FdScorer>? = null,
+    @SerializedName("competition") val competition: FdCompetition? = null
+)
+
+data class FdScorer(
+    @SerializedName("player") val player: FdPlayerRef? = null,
+    @SerializedName("team") val team: FdTeamRef? = null,
+    @SerializedName("goals") val goals: Int? = null,
+    @SerializedName("assists") val assists: Int? = null,
+    @SerializedName("penalties") val penalties: Int? = null
+)
+
+data class FdPlayerRef(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("firstName") val firstName: String? = null,
+    @SerializedName("lastName") val lastName: String? = null,
+    @SerializedName("dateOfBirth") val dateOfBirth: String? = null,
+    @SerializedName("nationality") val nationality: String? = null,
+    @SerializedName("position") val position: String? = null,
+    @SerializedName("shirtNumber") val shirtNumber: Int? = null
+)
+
+data class ScorerEntry(
+    val rank: Int,
+    val playerName: String,
+    val teamName: String?,
+    val teamBadge: String?,
+    val goals: Int,
+    val assists: Int?,
+    val penalties: Int?
+)
+
+fun FdScorer.toScorerEntry(rank: Int): ScorerEntry = ScorerEntry(
+    rank = rank,
+    playerName = player?.name ?: listOfNotNull(player?.firstName, player?.lastName).joinToString(" ").ifBlank { "Ismeretlen" },
+    teamName = team?.name,
+    teamBadge = team?.crest,
+    goals = goals ?: 0,
+    assists = assists,
+    penalties = penalties
+)
+
+// Group standings support
+data class GroupedTable(
+    val groupName: String,
+    val entries: List<TableEntry>
+)
+
