@@ -56,4 +56,10 @@ interface SportsApi {
         @Path("code") competitionCode: String,
         @Query("limit") limit: Int? = 20
     ): ScorersResponse
+
+    @GET("matches/{id}/head2head")
+    suspend fun getHead2Head(
+        @Path("id") matchId: Int,
+        @Query("limit") limit: Int? = 10
+    ): MatchesResponse
 }
