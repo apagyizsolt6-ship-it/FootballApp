@@ -48,9 +48,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val isDark by prefs.isDarkMode.collectAsState(initial = true)
+            val accent by prefs.accentColor.collectAsState(initial = AppPreferences.ACCENT_GREEN)
             val scope = rememberCoroutineScope()
 
-            FootballAppTheme(darkTheme = isDark) {
+            FootballAppTheme(darkTheme = isDark, accentKey = accent) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     FootballNavGraph(
                         isDarkTheme = isDark,
