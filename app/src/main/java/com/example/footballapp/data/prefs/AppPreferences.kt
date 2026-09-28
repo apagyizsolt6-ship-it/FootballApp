@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.footballapp.data.repository.SportsRepository
@@ -20,11 +21,13 @@ class AppPreferences(private val context: Context) {
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
     private val selectedLeaguesKey = stringSetPreferencesKey("selected_leagues")
     private val showOnlyFavoritesKey = booleanPreferencesKey("show_only_favorites")
+    private val accentColorKey = stringPreferencesKey("accent_color")
 
     val isDarkMode: Flow<Boolean> = context.dataStore.data.map { it[darkModeKey] ?: true }
     val favoriteTeamIds: Flow<Set<String>> = context.dataStore.data.map { it[favoritesKey] ?: emptySet() }
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { it[notificationsKey] ?: true }
     val showOnlyFavorites: Flow<Boolean> = context.dataStore.data.map { it[showOnlyFavoritesKey] ?: false }
+    val accentColor: Flow<String> = context.dataStore.data.map { it[accentColorKey] ?: ACCENT_GREEN }
 
     val selectedLeagueCodes: Flow<Set<String>> = context.dataStore.data.map {
         it[selectedLeaguesKey] ?: DEFAULT_LEAGUES
@@ -66,7 +69,16 @@ class AppPreferences(private val context: Context) {
         }
     }
 
+    suspend fun setAccentColor(colorKey: String) {
+        context.dataStore.edit { it[accentColorKey] = colorKey }
+    }
+
     companion object {
+        const val ACCENT_GREEN = "green"
+        const val ACCENT_BLUE = "blue"
+        const val ACCENT_ORANGE = "orange"
+        const val ACCENT_PURPLE = "purple"
+
         val DEFAULT_LEAGUES = setOf(
             SportsRepository.PREMIER_LEAGUE,
             SportsRepository.LA_LIGA,
