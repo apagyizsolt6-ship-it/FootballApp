@@ -23,6 +23,11 @@ class SportsRepository {
         const val SUPERLIGA = "DSU"
         const val EURO = "EC"
         const val WORLD_CUP = "WC"
+
+        val ALL_CODES = listOf(
+            PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1,
+            CHAMPIONS_LEAGUE, EREDIVISIE, PRIMEIRA_LIGA, BRASILEIRAO, SUPERLIGA, EURO, WORLD_CUP
+        )
     }
 
     suspend fun getMatchesForDate(
@@ -48,7 +53,6 @@ class SportsRepository {
             MatchCache.put(competitionCode, date, events)
             Result.success(events)
         } catch (e: Exception) {
-            // Offline fallback
             MatchCache.get(competitionCode, date)?.let {
                 return@withContext Result.success(it)
             }
@@ -66,6 +70,46 @@ class SportsRepository {
                     ?: response.standings?.firstOrNull()?.table
                     ?: emptyList()
                 Result.success(totalTable.map { it.toTableEntry() })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /** Csoportos tabella (CL, Euro, WC esetén) */
+    suspend fun getGroupedTable(competitionCode: String): Result<List<GroupedTable>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getStandings(competitionCode)
+                val groups = response.standings
+                    ?.filter { it.type == "TOTAL" || it.type == null }
+                    ?.mapNotNull { group ->
+                        val name = group.group ?: group.stage ?: "Tabella"
+                        val table = group.table?.map { it.toTableEntry() } ?: return@mapNotNull null
+                        if (table.isEmpty()) null else GroupedTable(name, table)
+                    }
+                    ?: emptyList()
+                if (groups.isEmpty()) {
+                    // fallback: egyetlen TOTAL
+                    val single = response.standings?.firstOrNull()?.table?.map { it.toTableEntry() }
+                    if (!single.isNullOrEmpty()) {
+                        Result.success(listOf(GroupedTable("Tabella", single)))
+                    } else {
+                        Result.success(emptyList())
+                    }
+                } else {
+                    Result.success(groups)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getScorers(competitionCode: String, limit: Int = 20): Result<List<ScorerEntry>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = api.getScorers(competitionCode, limit)
+                val list = response.scorers?.mapIndexed { index, s -> s.toScorerEntry(index + 1) } ?: emptyList()
+                Result.success(list)
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -103,10 +147,7 @@ class SportsRepository {
     suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
         try {
             val all = mutableListOf<Team>()
-            listOf(
-                PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1,
-                CHAMPIONS_LEAGUE, EREDIVISIE, PRIMEIRA_LIGA, BRASILEIRAO, SUPERLIGA
-            ).forEach { code ->
+            ALL_CODES.forEach { code ->
                 try {
                     all.addAll(api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList())
                 } catch (_: Exception) {}
@@ -122,7 +163,6 @@ class SportsRepository {
 
     suspend fun getMatch(matchId: String): Result<Event?> = withContext(Dispatchers.IO) {
         try {
-            // football-data.org: /matches/{id}
             val id = matchId.toIntOrNull() ?: return@withContext Result.success(null)
             val response = api.getMatch(id)
             Result.success(response.toEvent())
