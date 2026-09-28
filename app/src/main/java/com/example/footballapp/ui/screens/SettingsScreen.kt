@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.footballapp.data.cache.MatchCache
 import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.theme.PrimaryGreen
 import kotlinx.coroutines.launch
@@ -46,6 +47,7 @@ fun SettingsScreen(
     val notificationsEnabled by prefs.notificationsEnabled.collectAsState(initial = true)
     val showOnlyFavorites by prefs.showOnlyFavorites.collectAsState(initial = false)
     val selectedLeagues by prefs.selectedLeagueCodes.collectAsState(initial = AppPreferences.DEFAULT_LEAGUES)
+    val accent by prefs.accentColor.collectAsState(initial = AppPreferences.ACCENT_GREEN)
 
     Scaffold(
         topBar = {
@@ -86,6 +88,31 @@ fun SettingsScreen(
                     onCheckedChange = { onToggleTheme() },
                     colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Kiemelő szín", style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOf(
+                    AppPreferences.ACCENT_GREEN to "Zöld",
+                    AppPreferences.ACCENT_BLUE to "Kék",
+                    AppPreferences.ACCENT_ORANGE to "Narancs",
+                    AppPreferences.ACCENT_PURPLE to "Lila"
+                ).forEach { (key, label) ->
+                    FilterChip(
+                        selected = accent == key,
+                        onClick = { scope.launch { prefs.setAccentColor(key) } },
+                        label = { Text(label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PrimaryGreen,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -175,6 +202,20 @@ fun SettingsScreen(
                         colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Egyéb",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { MatchCache.clear() },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+            ) {
+                Text("Cache törlése")
             }
 
             Spacer(modifier = Modifier.height(32.dp))

@@ -1,7 +1,6 @@
 package com.example.footballapp.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -18,8 +17,10 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,7 @@ import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.MatchCard
 import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.viewmodel.HomeViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -42,12 +44,21 @@ fun HomeScreen(
     onMatchClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     prefs: AppPreferences? = null,
-    viewModel: HomeViewModel = viewModel {
-        // prefs átadása ha lehetséges – egyszerű factory helyett default
-        HomeViewModel(prefs = prefs)
-    }
+    viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    // Prefs szinkronizálása a ViewModel-lel
+    if (prefs != null) {
+        val selectedLeagues by prefs.selectedLeagueCodes.collectAsState(initial = AppPreferences.DEFAULT_LEAGUES)
+        val showOnlyFav by prefs.showOnlyFavorites.collectAsState(initial = false)
+        val favoriteIds by prefs.favoriteTeamIds.collectAsState(initial = emptySet())
+
+        LaunchedEffect(selectedLeagues, showOnlyFav, favoriteIds) {
+            viewModel.syncFromPrefs(selectedLeagues, showOnlyFav, favoriteIds)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -63,8 +74,13 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            // Kedvencek szűrő
-            IconButton(onClick = { viewModel.setShowOnlyFavorites(!uiState.showOnlyFavorites) }) {
+            IconButton(onClick = {
+                val newVal = !uiState.showOnlyFavorites
+                viewModel.setShowOnlyFavoritesLocal(newVal)
+                if (prefs != null) {
+                    scope.launch { prefs.setShowOnlyFavorites(newVal) }
+                }
+            }) {
                 Icon(
                     imageVector = if (uiState.showOnlyFavorites) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     contentDescription = "Csak kedvencek",
@@ -112,7 +128,7 @@ fun HomeScreen(
             }
         }
 
-        // Liga szűrő chip-ek (kompakt)
+        // Liga szűrő
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,7 +140,12 @@ fun HomeScreen(
                 val selected = code in uiState.selectedLeagueCodes
                 FilterChip(
                     selected = selected,
-                    onClick = { viewModel.toggleLeagueFilter(code) },
+                    onClick = {
+                        viewModel.toggleLeagueFilterLocal(code)
+                        if (prefs != null) {
+                            scope.launch { prefs.toggleLeague(code) }
+                        }
+                    },
                     label = { Text(name, style = MaterialTheme.typography.labelMedium) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = PrimaryGreen,
@@ -149,7 +170,12 @@ fun HomeScreen(
                             modifier = Modifier.padding(16.dp)
                         )
                         if (uiState.showOnlyFavorites) {
-                            TextButton(onClick = { viewModel.setShowOnlyFavorites(false) }) {
+                            TextButton(onClick = {
+                                viewModel.setShowOnlyFavoritesLocal(false)
+                                if (prefs != null) {
+                                    scope.launch { prefs.setShowOnlyFavorites(false) }
+                                }
+                            }) {
                                 Text("Összes meccs mutatása")
                             }
                         }
@@ -225,7 +251,8 @@ private fun DayChip(
         Text(
             text = month,
             fontSize = 10.sp,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (selected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+            else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
