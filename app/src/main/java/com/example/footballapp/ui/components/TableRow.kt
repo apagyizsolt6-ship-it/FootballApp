@@ -24,10 +24,33 @@ import com.example.footballapp.ui.theme.FormWin
 import com.example.footballapp.ui.theme.PrimaryGreen
 
 @Composable
+fun TableHeader() {
+    TableRowItem(
+        entry = TableEntry(
+            intRank = "#",
+            strTeam = "Csapat",
+            intPlayed = "P",
+            intWin = "W",
+            intDraw = "D",
+            intLoss = "L",
+            intGoalDifference = "GD",
+            intPoints = "Pts"
+        ),
+        isHeader = true
+    )
+}
+
+@Composable
 fun TableRowItem(entry: TableEntry, isHeader: Boolean = false, isEven: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(
+                if (!isHeader && isEven)
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                else
+                    androidx.compose.ui.graphics.Color.Transparent
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -48,9 +71,7 @@ fun TableRowItem(entry: TableEntry, isHeader: Boolean = false, isEven: Boolean =
             AsyncImage(
                 model = entry.strBadge,
                 contentDescription = null,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape),
+                modifier = Modifier.size(24.dp).clip(CircleShape),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(8.dp))
