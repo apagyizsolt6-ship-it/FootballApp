@@ -43,7 +43,14 @@ class HomeViewModel(
         SportsRepository.LA_LIGA to "La Liga",
         SportsRepository.SERIE_A to "Serie A",
         SportsRepository.BUNDESLIGA to "Bundesliga",
-        SportsRepository.LIGUE_1 to "Ligue 1"
+        SportsRepository.LIGUE_1 to "Ligue 1",
+        SportsRepository.CHAMPIONS_LEAGUE to "Bajnokok Ligája",
+        SportsRepository.EREDIVISIE to "Eredivisie",
+        SportsRepository.PRIMEIRA_LIGA to "Primeira Liga",
+        SportsRepository.BRASILEIRAO to "Brasileirão",
+        SportsRepository.SUPERLIGA to "Superliga",
+        SportsRepository.EURO to "Európa-bajnokság",
+        SportsRepository.WORLD_CUP to "Világkupa"
     )
 
     init {
