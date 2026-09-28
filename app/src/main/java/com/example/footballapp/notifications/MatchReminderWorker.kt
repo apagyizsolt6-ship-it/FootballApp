@@ -32,26 +32,22 @@ class MatchReminderWorker(
                 .format(Calendar.getInstance().time)
 
             var notifId = 1000
-            listOf(
-                SportsRepository.PREMIER_LEAGUE,
-                SportsRepository.LA_LIGA,
-                SportsRepository.SERIE_A,
-                SportsRepository.BUNDESLIGA,
-                SportsRepository.LIGUE_1
-            ).forEach { code ->
-                val matches = repo.getMatchesForDate(code, today).getOrNull() ?: return@forEach
-                matches.forEach { event ->
-                    val homeId = event.idHomeTeam
-                    val awayId = event.idAwayTeam
-                    if (homeId in favorites || awayId in favorites) {
-                        MatchNotificationHelper.showMatchReminder(
-                            applicationContext,
-                            notifId++,
-                            "Ma meccs: ${event.strHomeTeam} vs ${event.strAwayTeam}",
-                            "${event.strTime?.take(5) ?: ""} • ${event.strLeague ?: ""}"
-                        )
+            SportsRepository.ALL_CODES.forEach { code ->
+                try {
+                    val matches = repo.getMatchesForDate(code, today).getOrNull() ?: return@forEach
+                    matches.forEach { event ->
+                        val homeId = event.idHomeTeam
+                        val awayId = event.idAwayTeam
+                        if (homeId in favorites || awayId in favorites) {
+                            MatchNotificationHelper.showMatchReminder(
+                                applicationContext,
+                                notifId++,
+                                "Ma meccs: ${event.strHomeTeam} vs ${event.strAwayTeam}",
+                                "${event.strTime?.take(5) ?: ""} • ${event.strLeague ?: ""}"
+                            )
+                        }
                     }
-                }
+                } catch (_: Exception) {}
             }
             Result.success()
         } catch (_: Exception) {
