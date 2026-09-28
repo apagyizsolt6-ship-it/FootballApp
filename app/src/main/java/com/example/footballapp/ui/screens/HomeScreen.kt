@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,7 +31,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isDarkTheme: Boolean = true,
@@ -45,7 +44,7 @@ fun HomeScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp),
+                .padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -55,6 +54,9 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = { viewModel.refresh() }) {
+                Icon(Icons.Default.Refresh, contentDescription = "Frissítés", tint = PrimaryGreen)
+            }
             IconButton(onClick = onToggleTheme) {
                 Icon(
                     imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -81,49 +83,43 @@ fun HomeScreen(
             }
         }
 
-        PullToRefreshBox(
-            isRefreshing = uiState.isRefreshing,
-            onRefresh = { viewModel.refresh() },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            when {
-                uiState.isLoading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = PrimaryGreen)
-                    }
+        when {
+            uiState.isLoading || uiState.isRefreshing -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PrimaryGreen)
                 }
-                uiState.leaguesForDay.isEmpty() -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = uiState.error ?: "Nincs meccs ezen a napon",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            }
+            uiState.leaguesForDay.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = uiState.error ?: "Nincs meccs ezen a napon",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        uiState.leaguesForDay.forEach { leagueBlock ->
-                            item {
-                                Text(
-                                    text = leagueBlock.leagueName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = PrimaryGreen,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
-                                )
-                            }
-                            items(
-                                items = leagueBlock.matches,
-                                key = { it.idEvent ?: it.hashCode().toString() }
-                            ) { event ->
-                                MatchCard(
-                                    event = event,
-                                    onClick = { event.idEvent?.let { onMatchClick(it) } }
-                                )
-                            }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    uiState.leaguesForDay.forEach { leagueBlock ->
+                        item {
+                            Text(
+                                text = leagueBlock.leagueName,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PrimaryGreen,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                            )
+                        }
+                        items(
+                            items = leagueBlock.matches,
+                            key = { it.idEvent ?: it.hashCode().toString() }
+                        ) { event ->
+                            MatchCard(
+                                event = event,
+                                onClick = { event.idEvent?.let { onMatchClick(it) } }
+                            )
                         }
                     }
                 }
