@@ -1,12 +1,31 @@
 package com.example.footballapp.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -50,8 +69,12 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Text("Megjelenés", style = MaterialTheme.typography.titleMedium, color = PrimaryGreen)
-            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Megjelenés",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -65,18 +88,22 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-            Text("Értesítések", style = MaterialTheme.typography.titleMedium, color = PrimaryGreen)
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Értesítések",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Meccs emlékeztetők")
                     Text(
-                        "Kedvenc csapatok mai meccseiről",
+                        text = "Kedvenc csapatok mai meccseiről",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -90,9 +117,13 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-            Text("Meccsek", style = MaterialTheme.typography.titleMedium, color = PrimaryGreen)
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Meccsek",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,7 +132,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Csak kedvencek")
                     Text(
-                        "Csak a kedvenc csapatok meccseit mutassa",
+                        text = "Csak a kedvenc csapatok meccseit mutassa",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -115,14 +146,18 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-            Text("Aktív ligák", style = MaterialTheme.typography.titleMedium, color = PrimaryGreen)
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                "Legalább egy liga legyen bekapcsolva",
+                text = "Aktív ligák",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen
+            )
+            Text(
+                text = "Legalább egy liga legyen bekapcsolva",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             AppPreferences.ALL_LEAGUES.forEach { (code, name) ->
                 Row(
                     modifier = Modifier
@@ -142,9 +177,9 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             Text(
-                "Football App v2.0\nAdatok: football-data.org",
+                text = "Football App v2.0\nAdatok: football-data.org",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
