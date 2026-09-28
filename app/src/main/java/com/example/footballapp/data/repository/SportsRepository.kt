@@ -56,7 +56,7 @@ class SportsRepository {
             MatchCache.get(competitionCode, date)?.let {
                 return@withContext Result.success(it)
             }
-            Result.failure(e)
+            Result.failure(friendlyError(e))
         }
     }
 
@@ -71,7 +71,7 @@ class SportsRepository {
                     ?: emptyList()
                 Result.success(totalTable.map { it.toTableEntry() })
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(friendlyError(e))
             }
         }
 
@@ -100,7 +100,7 @@ class SportsRepository {
                     Result.success(groups)
                 }
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(friendlyError(e))
             }
         }
 
@@ -111,7 +111,7 @@ class SportsRepository {
                 val list = response.scorers?.mapIndexed { index, s -> s.toScorerEntry(index + 1) } ?: emptyList()
                 Result.success(list)
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(friendlyError(e))
             }
         }
 
@@ -120,7 +120,7 @@ class SportsRepository {
             try {
                 Result.success(api.getTeams(competitionCode).teams?.map { it.toTeam() } ?: emptyList())
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(friendlyError(e))
             }
         }
 
@@ -129,7 +129,7 @@ class SportsRepository {
             val id = teamId.toIntOrNull() ?: return@withContext Result.success(null)
             Result.success(api.getTeam(id).toTeam())
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(friendlyError(e))
         }
     }
 
@@ -140,7 +140,7 @@ class SportsRepository {
                 val response = api.getTeamMatches(id, status = status, limit = 20)
                 Result.success(response.matches?.map { it.toEvent() } ?: emptyList())
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(friendlyError(e))
             }
         }
 
@@ -157,7 +157,7 @@ class SportsRepository {
                     .filter { it.strTeam?.contains(query, ignoreCase = true) == true }
             )
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(friendlyError(e))
         }
     }
 
@@ -167,7 +167,44 @@ class SportsRepository {
             val response = api.getMatch(id)
             Result.success(response.toEvent())
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(friendlyError(e))
         }
     }
+
+    private fun friendlyError(e: Exception): Exception {
+        return when (e) {
+            is ApiClient.RateLimitException -> e
+            else -> {
+                val msg = e.message ?: ""
+                when {
+                    "429" in msg || "rate" in msg.lowercase() ->
+                        Exception("Túl sok kérés. Várj egy percet, majd frissíts.")
+                    "Unable to resolve host" in msg || "UnknownHost" in msg ->
+                        Exception("Nincs internetkapcsolat")
+                    "timeout" in msg.lowercase() ->
+                        Exception("Időtúllépés – próbáld újra")
+                    else -> e
+                }
+            }
+        }
+    }
+
+
+    suspend fun getHead2Head(matchId: String, limit: Int = 10): Result<List<Event>> =
+        withContext(Dispatchers.IO) {
+            try {
+                if (ApiClient.isRateLimited()) {
+                    return@withContext Result.failure(
+                        ApiClient.RateLimitException(ApiClient.rateLimitSecondsLeft())
+                    )
+                }
+                val id = matchId.toIntOrNull()
+                    ?: return@withContext Result.success(emptyList())
+                val response = api.getHead2Head(id, limit)
+                Result.success(response.matches?.map { it.toEvent() } ?: emptyList())
+            } catch (e: Exception) {
+                Result.failure(friendlyError(e))
+            }
+        }
+
 }
