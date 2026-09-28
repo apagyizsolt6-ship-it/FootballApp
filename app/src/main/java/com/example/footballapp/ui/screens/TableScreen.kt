@@ -33,7 +33,14 @@ fun TableScreen(
         "La Liga" to SportsRepository.LA_LIGA,
         "Serie A" to SportsRepository.SERIE_A,
         "Bundesliga" to SportsRepository.BUNDESLIGA,
-        "Ligue 1" to SportsRepository.LIGUE_1
+        "Ligue 1" to SportsRepository.LIGUE_1,
+        "Bajnokok Ligája" to SportsRepository.CHAMPIONS_LEAGUE,
+        "Eredivisie" to SportsRepository.EREDIVISIE,
+        "Primeira Liga" to SportsRepository.PRIMEIRA_LIGA,
+        "Brasileirão" to SportsRepository.BRASILEIRAO,
+        "Superliga" to SportsRepository.SUPERLIGA,
+        "Európa-bajnokság" to SportsRepository.EURO,
+        "Világkupa" to SportsRepository.WORLD_CUP
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
