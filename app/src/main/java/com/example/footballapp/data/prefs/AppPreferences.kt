@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.footballapp.data.repository.SportsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -17,10 +18,17 @@ class AppPreferences(private val context: Context) {
     private val darkModeKey = booleanPreferencesKey("dark_mode")
     private val favoritesKey = stringSetPreferencesKey("favorite_teams")
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
+    private val selectedLeaguesKey = stringSetPreferencesKey("selected_leagues")
+    private val showOnlyFavoritesKey = booleanPreferencesKey("show_only_favorites")
 
     val isDarkMode: Flow<Boolean> = context.dataStore.data.map { it[darkModeKey] ?: true }
     val favoriteTeamIds: Flow<Set<String>> = context.dataStore.data.map { it[favoritesKey] ?: emptySet() }
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { it[notificationsKey] ?: true }
+    val showOnlyFavorites: Flow<Boolean> = context.dataStore.data.map { it[showOnlyFavoritesKey] ?: false }
+
+    val selectedLeagueCodes: Flow<Set<String>> = context.dataStore.data.map {
+        it[selectedLeaguesKey] ?: DEFAULT_LEAGUES
+    }
 
     suspend fun setDarkMode(enabled: Boolean) {
         context.dataStore.edit { it[darkModeKey] = enabled }
@@ -36,5 +44,51 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { it[notificationsKey] = enabled }
+    }
+
+    suspend fun setShowOnlyFavorites(enabled: Boolean) {
+        context.dataStore.edit { it[showOnlyFavoritesKey] = enabled }
+    }
+
+    suspend fun setSelectedLeagues(codes: Set<String>) {
+        context.dataStore.edit { it[selectedLeaguesKey] = codes }
+    }
+
+    suspend fun toggleLeague(code: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[selectedLeaguesKey]?.toMutableSet() ?: DEFAULT_LEAGUES.toMutableSet()
+            if (current.contains(code)) {
+                if (current.size > 1) current.remove(code) // legalább 1 maradjon
+            } else {
+                current.add(code)
+            }
+            prefs[selectedLeaguesKey] = current
+        }
+    }
+
+    companion object {
+        val DEFAULT_LEAGUES = setOf(
+            SportsRepository.PREMIER_LEAGUE,
+            SportsRepository.LA_LIGA,
+            SportsRepository.SERIE_A,
+            SportsRepository.BUNDESLIGA,
+            SportsRepository.LIGUE_1,
+            SportsRepository.CHAMPIONS_LEAGUE
+        )
+
+        val ALL_LEAGUES = listOf(
+            SportsRepository.PREMIER_LEAGUE to "Premier League",
+            SportsRepository.LA_LIGA to "La Liga",
+            SportsRepository.SERIE_A to "Serie A",
+            SportsRepository.BUNDESLIGA to "Bundesliga",
+            SportsRepository.LIGUE_1 to "Ligue 1",
+            SportsRepository.CHAMPIONS_LEAGUE to "Bajnokok Ligája",
+            SportsRepository.EREDIVISIE to "Eredivisie",
+            SportsRepository.PRIMEIRA_LIGA to "Primeira Liga",
+            SportsRepository.BRASILEIRAO to "Brasileirão",
+            SportsRepository.SUPERLIGA to "Superliga",
+            SportsRepository.EURO to "Európa-bajnokság",
+            SportsRepository.WORLD_CUP to "Világkupa"
+        )
     }
 }
