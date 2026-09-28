@@ -22,6 +22,7 @@ import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.screens.HomeScreen
 import com.example.footballapp.ui.screens.MatchDetailScreen
 import com.example.footballapp.ui.screens.SearchScreen
+import com.example.footballapp.ui.screens.SettingsScreen
 import com.example.footballapp.ui.screens.TableScreen
 import com.example.footballapp.ui.screens.TeamDetailScreen
 import com.example.footballapp.ui.theme.PrimaryGreen
@@ -87,7 +88,11 @@ fun FootballNavGraph(
                     onToggleTheme = onToggleTheme,
                     onMatchClick = { matchId ->
                         navController.navigate("match/$matchId")
-                    }
+                    },
+                    onSettingsClick = {
+                        navController.navigate("settings")
+                    },
+                    prefs = prefs
                 )
             }
             composable(Screen.Search.route) {
@@ -99,6 +104,16 @@ fun FootballNavGraph(
             }
             composable(Screen.Table.route) {
                 TableScreen()
+            }
+            composable("settings") {
+                if (prefs != null) {
+                    SettingsScreen(
+                        prefs = prefs,
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = onToggleTheme,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
             composable(
                 route = "team/{teamId}",
