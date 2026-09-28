@@ -17,6 +17,12 @@ class SportsRepository {
         const val BUNDESLIGA = "BL1"
         const val LIGUE_1 = "FL1"
         const val CHAMPIONS_LEAGUE = "CL"
+        const val EREDIVISIE = "DED"
+        const val PRIMEIRA_LIGA = "PPL"
+        const val BRASILEIRAO = "BSA"
+        const val SUPERLIGA = "DSU"
+        const val EURO = "EC"
+        const val WORLD_CUP = "WC"
     }
 
     suspend fun getMatchesForDate(
@@ -97,7 +103,10 @@ class SportsRepository {
     suspend fun searchTeams(query: String): Result<List<Team>> = withContext(Dispatchers.IO) {
         try {
             val all = mutableListOf<Team>()
-            listOf(PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1).forEach { code ->
+            listOf(
+                PREMIER_LEAGUE, LA_LIGA, SERIE_A, BUNDESLIGA, LIGUE_1,
+                CHAMPIONS_LEAGUE, EREDIVISIE, PRIMEIRA_LIGA, BRASILEIRAO, SUPERLIGA
+            ).forEach { code ->
                 try {
                     all.addAll(api.getTeams(code).teams?.map { it.toTeam() } ?: emptyList())
                 } catch (_: Exception) {}
