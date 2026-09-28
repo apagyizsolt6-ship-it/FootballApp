@@ -10,7 +10,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -31,12 +30,12 @@ data class HomeUiState(
     val error: String? = null,
     val lastRefreshTime: String? = null,
     val showOnlyFavorites: Boolean = false,
-    val selectedLeagueCodes: Set<String> = emptySet()
+    val selectedLeagueCodes: Set<String> = AppPreferences.DEFAULT_LEAGUES,
+    val favoriteTeamIds: Set<String> = emptySet()
 )
 
 class HomeViewModel(
-    private val repository: SportsRepository = SportsRepository(),
-    private val prefs: AppPreferences? = null
+    private val repository: SportsRepository = SportsRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -44,7 +43,6 @@ class HomeViewModel(
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
     private val allLeagues = AppPreferences.ALL_LEAGUES
 
     init {
@@ -52,15 +50,7 @@ class HomeViewModel(
         val today = dateFormat.format(Calendar.getInstance().time)
         val initial = if (dates.contains(today)) today else dates.firstOrNull() ?: today
         _uiState.value = _uiState.value.copy(availableDates = dates, selectedDate = initial)
-        viewModelScope.launch {
-            val selected = prefs?.selectedLeagueCodes?.first() ?: AppPreferences.DEFAULT_LEAGUES
-            val onlyFav = prefs?.showOnlyFavorites?.first() ?: false
-            _uiState.value = _uiState.value.copy(
-                selectedLeagueCodes = selected,
-                showOnlyFavorites = onlyFav
-            )
-            loadDay(initial)
-        }
+        loadDay(initial)
     }
 
     private fun buildDateList(pastDays: Int, futureDays: Int): List<String> {
@@ -68,6 +58,25 @@ class HomeViewModel(
         cal.add(Calendar.DAY_OF_YEAR, -pastDays)
         return List(pastDays + futureDays) {
             dateFormat.format(cal.time).also { cal.add(Calendar.DAY_OF_YEAR, 1) }
+        }
+    }
+
+    /** Hívandó a Composable-ből, amikor a prefs értékek megérkeznek */
+    fun syncFromPrefs(
+        selectedLeagues: Set<String>,
+        showOnlyFavorites: Boolean,
+        favoriteIds: Set<String>
+    ) {
+        val changed = selectedLeagues != _uiState.value.selectedLeagueCodes ||
+                showOnlyFavorites != _uiState.value.showOnlyFavorites ||
+                favoriteIds != _uiState.value.favoriteTeamIds
+        _uiState.value = _uiState.value.copy(
+            selectedLeagueCodes = selectedLeagues.ifEmpty { AppPreferences.DEFAULT_LEAGUES },
+            showOnlyFavorites = showOnlyFavorites,
+            favoriteTeamIds = favoriteIds
+        )
+        if (changed) {
+            loadDay(_uiState.value.selectedDate)
         }
     }
 
@@ -81,21 +90,20 @@ class HomeViewModel(
         loadDay(_uiState.value.selectedDate, forceRefresh = true)
     }
 
-    fun setShowOnlyFavorites(enabled: Boolean) {
-        viewModelScope.launch {
-            prefs?.setShowOnlyFavorites(enabled)
-            _uiState.value = _uiState.value.copy(showOnlyFavorites = enabled)
-            loadDay(_uiState.value.selectedDate)
-        }
+    fun setShowOnlyFavoritesLocal(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(showOnlyFavorites = enabled)
+        loadDay(_uiState.value.selectedDate)
     }
 
-    fun toggleLeagueFilter(code: String) {
-        viewModelScope.launch {
-            prefs?.toggleLeague(code)
-            val selected = prefs?.selectedLeagueCodes?.first() ?: AppPreferences.DEFAULT_LEAGUES
-            _uiState.value = _uiState.value.copy(selectedLeagueCodes = selected)
-            loadDay(_uiState.value.selectedDate)
+    fun toggleLeagueFilterLocal(code: String) {
+        val current = _uiState.value.selectedLeagueCodes.toMutableSet()
+        if (current.contains(code)) {
+            if (current.size > 1) current.remove(code)
+        } else {
+            current.add(code)
         }
+        _uiState.value = _uiState.value.copy(selectedLeagueCodes = current)
+        loadDay(_uiState.value.selectedDate)
     }
 
     private fun loadDay(date: String, forceRefresh: Boolean = false) {
@@ -110,8 +118,7 @@ class HomeViewModel(
                     AppPreferences.DEFAULT_LEAGUES
                 }
                 val leaguesToLoad = allLeagues.filter { it.first in selectedCodes }
-
-                val favorites = prefs?.favoriteTeamIds?.first() ?: emptySet()
+                val favorites = _uiState.value.favoriteTeamIds
                 val onlyFav = _uiState.value.showOnlyFavorites
 
                 val results = leaguesToLoad.map { (code, name) ->
