@@ -50,4 +50,10 @@ interface SportsApi {
     suspend fun getMatch(
         @Path("id") matchId: Int
     ): FdMatch
+
+    @GET("competitions/{code}/scorers")
+    suspend fun getScorers(
+        @Path("code") competitionCode: String,
+        @Query("limit") limit: Int? = 20
+    ): ScorersResponse
 }
