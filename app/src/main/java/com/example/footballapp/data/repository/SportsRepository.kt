@@ -171,6 +171,21 @@ class SportsRepository {
         }
     }
 
+    suspend fun getMatchDetail(matchId: String): Result<MatchDetail?> = withContext(Dispatchers.IO) {
+        try {
+            if (ApiClient.isRateLimited()) {
+                return@withContext Result.failure(
+                    ApiClient.RateLimitException(ApiClient.rateLimitSecondsLeft())
+                )
+            }
+            val id = matchId.toIntOrNull() ?: return@withContext Result.success(null)
+            val response = api.getMatch(id)
+            Result.success(response.toMatchDetail())
+        } catch (e: Exception) {
+            Result.failure(friendlyError(e))
+        }
+    }
+
     private fun friendlyError(e: Exception): Exception {
         return when (e) {
             is ApiClient.RateLimitException -> e
