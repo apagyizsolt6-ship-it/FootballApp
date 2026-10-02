@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,7 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.footballapp.data.api.ApiClient
+import com.example.footballapp.data.model.BookingItem
 import com.example.footballapp.data.model.Event
+import com.example.footballapp.data.model.GoalItem
+import com.example.footballapp.data.model.MatchDetail
 import com.example.footballapp.data.repository.SportsRepository
 import com.example.footballapp.ui.theme.LiveRed
 import kotlinx.coroutines.delay
@@ -35,7 +39,7 @@ fun MatchDetailScreen(
     onBack: () -> Unit,
     onTeamClick: (String) -> Unit = {}
 ) {
-    var event by remember { mutableStateOf<Event?>(null) }
+    var detail by remember { mutableStateOf<MatchDetail?>(null) }
     var h2h by remember { mutableStateOf<List<Event>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
@@ -52,10 +56,10 @@ fun MatchDetailScreen(
             refreshing = false
             return
         }
-        val result = repo.getMatch(matchId)
-        event = result.getOrNull()
+        val result = repo.getMatchDetail(matchId)
+        detail = result.getOrNull()
         error = result.exceptionOrNull()?.message
-        if (event != null) {
+        if (detail != null) {
             val h2hResult = repo.getHead2Head(matchId, limit = 10)
             h2h = h2hResult.getOrDefault(emptyList())
                 .filter { it.idEvent != matchId }
@@ -66,22 +70,19 @@ fun MatchDetailScreen(
 
     LaunchedEffect(matchId) { load() }
 
-    // Élő meccs auto-frissítés
-    LaunchedEffect(event?.strStatus) {
-        while (event?.strStatus == "LIVE") {
+    LaunchedEffect(detail?.event?.strStatus) {
+        while (detail?.event?.strStatus == "LIVE") {
             delay(30_000)
             load(force = true)
         }
     }
 
-    val e = event
+    val e = detail?.event
     val isLive = e?.strStatus == "LIVE"
     val isFinished = e?.strStatus == "FT"
     val hasScore = e?.intHomeScore != null
 
-    // H2H összesítő
     val homeId = e?.idHomeTeam
-    val awayId = e?.idAwayTeam
     var homeWins = 0
     var awayWins = 0
     var draws = 0
@@ -107,7 +108,7 @@ fun MatchDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Vissza")
                     }
-                },
+                }
             )
         }
     ) { padding ->
@@ -118,7 +119,7 @@ fun MatchDetailScreen(
             ) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
-            e == null -> Box(
+            e == null || detail == null -> Box(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
@@ -135,6 +136,7 @@ fun MatchDetailScreen(
                 }
             }
             else -> {
+                val d = detail!!
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -142,7 +144,6 @@ fun MatchDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
                 ) {
-                    // Liga + státusz
                     item {
                         Text(
                             text = e.strLeague ?: "",
@@ -165,20 +166,17 @@ fun MatchDetailScreen(
                             )
                         }
                         Spacer(Modifier.height(12.dp))
-
-                        StatusBadge(status = e.strStatus)
+                        StatusBadge(status = e.strStatus, minute = d.minute, injuryTime = d.injuryTime)
                         Spacer(Modifier.height(8.dp))
-
                         if (!isLive) {
                             Text(
                                 text = "${e.dateEvent ?: ""}  ${e.strTime?.take(5) ?: ""}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(24.dp))
                     }
 
-                    // Csapatok + eredmény
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -215,6 +213,22 @@ fun MatchDetailScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                // Hosszabbítás / 11-es
+                                if (d.extraTimeHome != null || d.extraTimeAway != null) {
+                                    Text(
+                                        text = "Hossz.: ${d.extraTimeHome ?: 0} – ${d.extraTimeAway ?: 0}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (d.penaltiesHome != null || d.penaltiesAway != null) {
+                                    Text(
+                                        text = "11-es: ${d.penaltiesHome ?: 0} – ${d.penaltiesAway ?: 0}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                             TeamColumn(
                                 name = e.strAwayTeam ?: "?",
@@ -223,7 +237,23 @@ fun MatchDetailScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(12.dp))
+                        // Helyszín / bíró / nézőszám
+                        val infoBits = buildList {
+                            d.venue?.let { add("📍 $it") }
+                            d.referee?.let { add("🧑‍⚖️ $it") }
+                            d.attendance?.let { add("👥 ${"%,d".format(it)}") }
+                        }
+                        if (infoBits.isNotEmpty()) {
+                            Text(
+                                text = infoBits.joinToString("\n"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
                         TextButton(
                             onClick = { scope.launch { load(force = true) } },
                             enabled = !refreshing
@@ -249,21 +279,35 @@ fun MatchDetailScreen(
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(20.dp))
                         HorizontalDivider()
-                        Spacer(Modifier.height(16.dp))
                     }
 
-                    // H2H összesítő
+                    // Gólok
+                    if (d.goals.isNotEmpty()) {
+                        item {
+                            SectionTitle("Gólok")
+                        }
+                        items(d.goals) { goal ->
+                            GoalRow(goal)
+                        }
+                        item { Spacer(Modifier.height(8.dp)); HorizontalDivider() }
+                    }
+
+                    // Lapok
+                    if (d.bookings.isNotEmpty()) {
+                        item {
+                            SectionTitle("Lapok")
+                        }
+                        items(d.bookings) { booking ->
+                            BookingRow(booking)
+                        }
+                        item { Spacer(Modifier.height(8.dp)); HorizontalDivider() }
+                    }
+
+                    // H2H
                     item {
-                        Text(
-                            text = "Egymás ellen (H2H)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(12.dp))
+                        SectionTitle("Egymás ellen (H2H)")
                         if (h2h.isNotEmpty()) {
                             Row(
                                 modifier = Modifier
@@ -273,32 +317,22 @@ fun MatchDetailScreen(
                                     .padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                H2HStat(
-                                    label = e.strHomeTeam?.take(12) ?: "Hazai",
-                                    value = homeWins.toString()
-                                )
-                                H2HStat(label = "Döntetlen", value = draws.toString())
-                                H2HStat(
-                                    label = e.strAwayTeam?.take(12) ?: "Vendég",
-                                    value = awayWins.toString()
-                                )
+                                H2HStat(e.strHomeTeam?.take(12) ?: "Hazai", homeWins.toString())
+                                H2HStat("Döntetlen", draws.toString())
+                                H2HStat(e.strAwayTeam?.take(12) ?: "Vendég", awayWins.toString())
                             }
                             Spacer(Modifier.height(12.dp))
-                        }
-                    }
-
-                    if (h2h.isEmpty()) {
-                        item {
+                        } else {
                             Text(
                                 text = "Nincs elérhető korábbi meccs (API korlát).",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                    } else {
-                        items(h2h) { past ->
-                            H2HMatchCard(past)
-                        }
+                    }
+
+                    items(h2h) { past ->
+                        H2HMatchCard(past)
                     }
 
                     item { Spacer(Modifier.height(24.dp)) }
@@ -309,9 +343,29 @@ fun MatchDetailScreen(
 }
 
 @Composable
-private fun StatusBadge(status: String?) {
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 8.dp)
+    )
+}
+
+@Composable
+private fun StatusBadge(status: String?, minute: Int?, injuryTime: Int?) {
     val (text, color) = when (status) {
-        "LIVE" -> "● ÉLŐ" to LiveRed
+        "LIVE" -> {
+            val min = buildString {
+                if (minute != null) append("$minute'")
+                if (injuryTime != null && injuryTime > 0) append("+$injuryTime")
+                if (isEmpty()) append("ÉLŐ")
+            }
+            "● $min" to LiveRed
+        }
         "FT" -> "Vége" to MaterialTheme.colorScheme.primary
         "NS" -> "Még nem kezdődött" to MaterialTheme.colorScheme.onSurfaceVariant
         "PP" -> "Elhalasztva" to MaterialTheme.colorScheme.error
@@ -319,12 +373,7 @@ private fun StatusBadge(status: String?) {
         else -> (status ?: "") to MaterialTheme.colorScheme.onSurfaceVariant
     }
     if (text.isBlank()) return
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        color = color,
-        style = MaterialTheme.typography.titleSmall
-    )
+    Text(text = text, fontWeight = FontWeight.Bold, color = color, style = MaterialTheme.typography.titleSmall)
 }
 
 @Composable
@@ -371,6 +420,102 @@ private fun TeamColumn(
             textAlign = TextAlign.Center,
             maxLines = 2,
             color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun GoalRow(goal: GoalItem) {
+    val minuteLabel = buildString {
+        goal.minute?.let { append("$it'") }
+        goal.injuryTime?.let { append("+$it") }
+    }.ifBlank { "–" }
+    val typeLabel = when (goal.type) {
+        "PENALTY" -> " (11-es)"
+        "OWN" -> " (öngól)"
+        else -> ""
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = minuteLabel,
+            modifier = Modifier.width(40.dp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${goal.scorer ?: "?"}$typeLabel",
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!goal.assist.isNullOrBlank()) {
+                Text(
+                    text = "Gólpassz: ${goal.assist}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Text(
+            text = if (goal.isHome) "H" else "V",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun BookingRow(booking: BookingItem) {
+    val cardColor = when (booking.card) {
+        "RED", "YELLOW_RED" -> Color(0xFFE53935)
+        else -> Color(0xFFFFC107)
+    }
+    val cardLabel = when (booking.card) {
+        "RED" -> "Piros"
+        "YELLOW_RED" -> "2. sárga"
+        else -> "Sárga"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = booking.minute?.let { "$it'" } ?: "–",
+            modifier = Modifier.width(40.dp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Box(
+            modifier = Modifier
+                .size(14.dp, 18.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(cardColor)
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = booking.player ?: "?",
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = cardLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = if (booking.isHome) "H" else "V",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
