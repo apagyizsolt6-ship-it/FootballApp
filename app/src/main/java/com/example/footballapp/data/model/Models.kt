@@ -18,6 +18,10 @@ data class FdMatch(
     @SerializedName("id") val id: Int? = null,
     @SerializedName("utcDate") val utcDate: String? = null,
     @SerializedName("status") val status: String? = null,
+    @SerializedName("minute") val minute: Int? = null,
+    @SerializedName("injuryTime") val injuryTime: Int? = null,
+    @SerializedName("attendance") val attendance: Int? = null,
+    @SerializedName("venue") val venue: String? = null,
     @SerializedName("matchday") val matchday: Int? = null,
     @SerializedName("stage") val stage: String? = null,
     @SerializedName("group") val group: String? = null,
@@ -25,7 +29,10 @@ data class FdMatch(
     @SerializedName("homeTeam") val homeTeam: FdTeamRef? = null,
     @SerializedName("awayTeam") val awayTeam: FdTeamRef? = null,
     @SerializedName("score") val score: FdScore? = null,
-    @SerializedName("competition") val competition: FdCompetition? = null
+    @SerializedName("competition") val competition: FdCompetition? = null,
+    @SerializedName("goals") val goals: List<FdGoal>? = null,
+    @SerializedName("bookings") val bookings: List<FdBooking>? = null,
+    @SerializedName("referees") val referees: List<FdReferee>? = null
 )
 
 data class FdTeamRef(
@@ -40,7 +47,10 @@ data class FdScore(
     @SerializedName("winner") val winner: String? = null,
     @SerializedName("duration") val duration: String? = null,
     @SerializedName("fullTime") val fullTime: FdScoreDetail? = null,
-    @SerializedName("halfTime") val halfTime: FdScoreDetail? = null
+    @SerializedName("halfTime") val halfTime: FdScoreDetail? = null,
+    @SerializedName("regularTime") val regularTime: FdScoreDetail? = null,
+    @SerializedName("extraTime") val extraTime: FdScoreDetail? = null,
+    @SerializedName("penalties") val penalties: FdScoreDetail? = null
 )
 
 data class FdScoreDetail(
@@ -55,6 +65,115 @@ data class FdCompetition(
     @SerializedName("type") val type: String? = null,
     @SerializedName("emblem") val emblem: String? = null
 )
+
+
+data class FdGoal(
+    @SerializedName("minute") val minute: Int? = null,
+    @SerializedName("injuryTime") val injuryTime: Int? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("team") val team: FdTeamRef? = null,
+    @SerializedName("scorer") val scorer: FdPlayerRef? = null,
+    @SerializedName("assist") val assist: FdPlayerRef? = null
+)
+
+data class FdBooking(
+    @SerializedName("minute") val minute: Int? = null,
+    @SerializedName("team") val team: FdTeamRef? = null,
+    @SerializedName("player") val player: FdPlayerRef? = null,
+    @SerializedName("card") val card: String? = null
+)
+
+data class FdReferee(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("nationality") val nationality: String? = null
+)
+
+/** Részletes meccs adat a UI-hoz */
+data class MatchDetail(
+    val event: Event,
+    val venue: String? = null,
+    val attendance: Int? = null,
+    val minute: Int? = null,
+    val injuryTime: Int? = null,
+    val scoreDuration: String? = null,
+    val regularTimeHome: Int? = null,
+    val regularTimeAway: Int? = null,
+    val extraTimeHome: Int? = null,
+    val extraTimeAway: Int? = null,
+    val penaltiesHome: Int? = null,
+    val penaltiesAway: Int? = null,
+    val goals: List<GoalItem> = emptyList(),
+    val bookings: List<BookingItem> = emptyList(),
+    val referee: String? = null
+)
+
+data class GoalItem(
+    val minute: Int?,
+    val injuryTime: Int?,
+    val type: String?,
+    val teamName: String?,
+    val isHome: Boolean,
+    val scorer: String?,
+    val assist: String?
+)
+
+data class BookingItem(
+    val minute: Int?,
+    val teamName: String?,
+    val isHome: Boolean,
+    val player: String?,
+    val card: String?
+)
+
+fun FdMatch.toMatchDetail(): MatchDetail {
+    val homeId = homeTeam?.id
+    val goals = this.goals?.map { g ->
+        GoalItem(
+            minute = g.minute,
+            injuryTime = g.injuryTime,
+            type = g.type,
+            teamName = g.team?.name,
+            isHome = g.team?.id == homeId,
+            scorer = g.scorer?.name,
+            assist = g.assist?.name
+        )
+    }?.sortedBy { it.minute ?: 0 } ?: emptyList()
+
+    val bookings = this.bookings?.map { b ->
+        BookingItem(
+            minute = b.minute,
+            teamName = b.team?.name,
+            isHome = b.team?.id == homeId,
+            player = b.player?.name,
+            card = b.card
+        )
+    }?.sortedBy { it.minute ?: 0 } ?: emptyList()
+
+    val mainRef = referees?.firstOrNull {
+        it.type == "REFEREE" || it.type == null
+    } ?: referees?.firstOrNull()
+
+    return MatchDetail(
+        event = toEvent(),
+        venue = venue,
+        attendance = attendance,
+        minute = minute,
+        injuryTime = injuryTime,
+        scoreDuration = score?.duration,
+        regularTimeHome = score?.regularTime?.home,
+        regularTimeAway = score?.regularTime?.away,
+        extraTimeHome = score?.extraTime?.home,
+        extraTimeAway = score?.extraTime?.away,
+        penaltiesHome = score?.penalties?.home,
+        penaltiesAway = score?.penalties?.away,
+        goals = goals,
+        bookings = bookings,
+        referee = mainRef?.name
+    )
+}
+
 
 // ========== Standings ==========
 data class StandingsResponse(
