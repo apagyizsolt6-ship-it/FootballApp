@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.footballapp.data.model.Event
 import com.example.footballapp.ui.theme.LiveRed
-import com.example.footballapp.ui.theme.PrimaryGreen
 
 @Composable
 fun MatchCard(
@@ -101,7 +100,7 @@ fun MatchCard(
                         .background(
                             color = when {
                                 isLive -> LiveRed.copy(alpha = 0.15f)
-                                hasScore -> PrimaryGreen.copy(alpha = 0.15f)
+                                hasScore -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 else -> MaterialTheme.colorScheme.surface
                             },
                             shape = RoundedCornerShape(8.dp)
@@ -113,7 +112,7 @@ fun MatchCard(
                         Text(
                             text = "${event.intHomeScore} - ${event.intAwayScore}",
                             fontWeight = FontWeight.Bold,
-                            color = if (isLive) LiveRed else PrimaryGreen,
+                            color = if (isLive) LiveRed else MaterialTheme.colorScheme.primary,
                             fontSize = 16.sp
                         )
                     } else {

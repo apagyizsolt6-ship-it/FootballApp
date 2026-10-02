@@ -21,7 +21,6 @@ import com.example.footballapp.data.model.TableEntry
 import com.example.footballapp.ui.theme.FormDraw
 import com.example.footballapp.ui.theme.FormLoss
 import com.example.footballapp.ui.theme.FormWin
-import com.example.footballapp.ui.theme.PrimaryGreen
 
 @Composable
 fun TableHeader() {
@@ -60,7 +59,7 @@ fun TableRowItem(entry: TableEntry, isHeader: Boolean = false, isEven: Boolean =
             fontWeight = if (isHeader) FontWeight.Bold else FontWeight.SemiBold,
             color = when {
                 isHeader -> MaterialTheme.colorScheme.onSurfaceVariant
-                (entry.intRank?.toIntOrNull() ?: 99) <= 4 -> PrimaryGreen
+                (entry.intRank?.toIntOrNull() ?: 99) <= 4 -> MaterialTheme.colorScheme.primary
                 else -> MaterialTheme.colorScheme.onSurface
             },
             textAlign = TextAlign.Center,
