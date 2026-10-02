@@ -25,7 +25,6 @@ import com.example.footballapp.ui.screens.SearchScreen
 import com.example.footballapp.ui.screens.SettingsScreen
 import com.example.footballapp.ui.screens.TableScreen
 import com.example.footballapp.ui.screens.TeamDetailScreen
-import com.example.footballapp.ui.theme.PrimaryGreen
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Home : Screen("home", "Meccsek", Icons.Default.Home)
@@ -67,9 +66,9 @@ fun FootballNavGraph(
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = PrimaryGreen,
-                                selectedTextColor = PrimaryGreen,
-                                indicatorColor = PrimaryGreen.copy(alpha = 0.15f)
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             )
                         )
                     }
