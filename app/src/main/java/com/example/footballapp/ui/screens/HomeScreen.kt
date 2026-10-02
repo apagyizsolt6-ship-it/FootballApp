@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.MatchCard
 import com.example.footballapp.viewmodel.HomeViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -56,6 +57,17 @@ fun HomeScreen(
 
         LaunchedEffect(selectedLeagues, showOnlyFav, favoriteIds) {
             viewModel.syncFromPrefs(selectedLeagues, showOnlyFav, favoriteIds)
+        }
+    }
+
+
+    // Élő meccsek auto-frissítés 45 mp-enként
+    LaunchedEffect(uiState.hasLiveMatches) {
+        if (!uiState.hasLiveMatches) return@LaunchedEffect
+        while (true) {
+            delay(45_000)
+            if (!viewModel.uiState.value.hasLiveMatches) break
+            viewModel.refresh()
         }
     }
 
@@ -101,23 +113,50 @@ fun HomeScreen(
             }
         }
 
+        if (uiState.isOffline) {
+            Text(
+                text = "⚠ Nincs internetkapcsolat – cache / offline adatok",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+
         if (uiState.lastRefreshTime != null) {
             Text(
-                text = "Frissítve: ${uiState.lastRefreshTime}",
+                text = if (uiState.hasLiveMatches)
+                    "● Élő meccsek – frissítve: ${uiState.lastRefreshTime} (auto 45 mp)"
+                else
+                    "Frissítve: ${uiState.lastRefreshTime}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (uiState.hasLiveMatches)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
             )
         }
 
-        // Dátumválasztó
+        // Dátumválasztó + Ma gomb
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            FilterChip(
+                selected = false,
+                onClick = { viewModel.goToToday() },
+                label = { Text("Ma", fontWeight = FontWeight.Bold) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    labelColor = MaterialTheme.colorScheme.primary
+                )
+            )
             uiState.availableDates.forEach { date ->
                 DayChip(
                     date = date,
