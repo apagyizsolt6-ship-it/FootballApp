@@ -20,7 +20,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.MatchCard
-import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.viewmodel.TeamDetailViewModel
 import kotlinx.coroutines.launch
 
@@ -60,7 +59,7 @@ fun TeamDetailScreen(
                                 imageVector = if (isFavorite) Icons.Default.Favorite
                                 else Icons.Default.FavoriteBorder,
                                 contentDescription = "Kedvenc",
-                                tint = if (isFavorite) PrimaryGreen else MaterialTheme.colorScheme.onSurface
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -70,7 +69,7 @@ fun TeamDetailScreen(
     ) { padding ->
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryGreen)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.team == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {

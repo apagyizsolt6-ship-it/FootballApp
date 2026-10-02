@@ -19,7 +19,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.footballapp.ui.components.TeamCard
-import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.ui.theme.TextPrimary
 import com.example.footballapp.ui.theme.TextSecondary
 import com.example.footballapp.viewmodel.SearchViewModel
@@ -67,7 +66,7 @@ fun SearchScreen(
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PrimaryGreen)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             uiState.error != null -> {

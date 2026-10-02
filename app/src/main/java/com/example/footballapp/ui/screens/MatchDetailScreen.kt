@@ -16,7 +16,6 @@ import com.example.footballapp.data.api.ApiClient
 import com.example.footballapp.data.model.Event
 import com.example.footballapp.data.repository.SportsRepository
 import com.example.footballapp.ui.theme.LiveRed
-import com.example.footballapp.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +65,7 @@ fun MatchDetailScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = PrimaryGreen)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
             event == null -> Box(
                 Modifier.fillMaxSize().padding(padding),
@@ -117,7 +116,7 @@ fun MatchDetailScreen(
                             else "vs",
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isLive) LiveRed else PrimaryGreen
+                            color = if (isLive) LiveRed else MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
@@ -139,7 +138,7 @@ fun MatchDetailScreen(
                             text = "Korábbi találkozók (H2H)",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = PrimaryGreen,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(8.dp))

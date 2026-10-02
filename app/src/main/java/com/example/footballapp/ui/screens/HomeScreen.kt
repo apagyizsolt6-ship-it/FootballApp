@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.MatchCard
-import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -84,20 +83,20 @@ fun HomeScreen(
                 Icon(
                     imageVector = if (uiState.showOnlyFavorites) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     contentDescription = "Csak kedvencek",
-                    tint = if (uiState.showOnlyFavorites) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (uiState.showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = { viewModel.refresh() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Frissítés", tint = PrimaryGreen)
+                Icon(Icons.Default.Refresh, contentDescription = "Frissítés", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, contentDescription = "Beállítások", tint = PrimaryGreen)
+                Icon(Icons.Default.Settings, contentDescription = "Beállítások", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onToggleTheme) {
                 Icon(
                     imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                     contentDescription = "Téma",
-                    tint = PrimaryGreen
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -148,7 +147,7 @@ fun HomeScreen(
                     },
                     label = { Text(name, style = MaterialTheme.typography.labelMedium) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PrimaryGreen,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
@@ -158,7 +157,7 @@ fun HomeScreen(
         when {
             uiState.isLoading || uiState.isRefreshing -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PrimaryGreen)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             uiState.leaguesForDay.isEmpty() -> {
@@ -192,7 +191,7 @@ fun HomeScreen(
                             Text(
                                 text = leagueBlock.leagueName,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = PrimaryGreen,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                             )
@@ -231,7 +230,7 @@ private fun DayChip(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (selected) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),

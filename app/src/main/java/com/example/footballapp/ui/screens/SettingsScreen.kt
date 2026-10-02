@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.footballapp.data.cache.MatchCache
 import com.example.footballapp.data.prefs.AppPreferences
-import com.example.footballapp.ui.theme.PrimaryGreen
+import com.example.footballapp.ui.theme.accentPrimary
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +78,7 @@ fun SettingsScreen(
             Text(
                 text = "Megjelenés",
                 style = MaterialTheme.typography.titleMedium,
-                color = PrimaryGreen
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -90,7 +90,7 @@ fun SettingsScreen(
                 Switch(
                     checked = isDarkTheme,
                     onCheckedChange = { onToggleTheme() },
-                    colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                 )
             }
 
@@ -107,13 +107,16 @@ fun SettingsScreen(
                     AppPreferences.ACCENT_ORANGE to "Narancs",
                     AppPreferences.ACCENT_PURPLE to "Lila"
                 ).forEach { (key, label) ->
+                    val chipColor = accentPrimary(key)
                     FilterChip(
                         selected = accent == key,
                         onClick = { scope.launch { prefs.setAccentColor(key) } },
                         label = { Text(label) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryGreen,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            selectedContainerColor = chipColor,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = chipColor.copy(alpha = 0.25f),
+                            labelColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -123,7 +126,7 @@ fun SettingsScreen(
             Text(
                 text = "Értesítések",
                 style = MaterialTheme.typography.titleMedium,
-                color = PrimaryGreen
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -144,7 +147,7 @@ fun SettingsScreen(
                     onCheckedChange = { enabled ->
                         scope.launch { prefs.setNotificationsEnabled(enabled) }
                     },
-                    colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                 )
             }
 
@@ -152,7 +155,7 @@ fun SettingsScreen(
             Text(
                 text = "Meccsek",
                 style = MaterialTheme.typography.titleMedium,
-                color = PrimaryGreen
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -173,7 +176,7 @@ fun SettingsScreen(
                     onCheckedChange = { enabled ->
                         scope.launch { prefs.setShowOnlyFavorites(enabled) }
                     },
-                    colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                 )
             }
 
@@ -181,7 +184,7 @@ fun SettingsScreen(
             Text(
                 text = "Aktív ligák",
                 style = MaterialTheme.typography.titleMedium,
-                color = PrimaryGreen
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = "Legalább egy liga legyen bekapcsolva",
@@ -203,7 +206,7 @@ fun SettingsScreen(
                         onCheckedChange = {
                             scope.launch { prefs.toggleLeague(code) }
                         },
-                        colors = SwitchDefaults.colors(checkedTrackColor = PrimaryGreen)
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                     )
                 }
             }
@@ -212,12 +215,12 @@ fun SettingsScreen(
             Text(
                 text = "Egyéb",
                 style = MaterialTheme.typography.titleMedium,
-                color = PrimaryGreen
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { MatchCache.clear() },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Cache törlése")
             }

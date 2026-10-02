@@ -18,7 +18,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.footballapp.data.prefs.AppPreferences
 import com.example.footballapp.ui.components.TableHeader
 import com.example.footballapp.ui.components.TableRowItem
-import com.example.footballapp.ui.theme.PrimaryGreen
 import com.example.footballapp.ui.theme.TextPrimary
 import com.example.footballapp.ui.theme.TextSecondary
 import com.example.footballapp.viewmodel.TableViewModel
@@ -53,7 +52,7 @@ fun TableScreen(
                     onClick = { viewModel.loadTable(id) },
                     label = { Text(name) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PrimaryGreen,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
@@ -72,7 +71,7 @@ fun TableScreen(
                 onClick = { viewModel.showTable() },
                 label = { Text("Tabella") },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = PrimaryGreen,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
@@ -81,7 +80,7 @@ fun TableScreen(
                 onClick = { viewModel.loadScorers() },
                 label = { Text("Gólkirályok") },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = PrimaryGreen,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
@@ -90,7 +89,7 @@ fun TableScreen(
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PrimaryGreen)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             uiState.error != null && !uiState.showScorers && uiState.table.isEmpty() && uiState.groupedTables.isEmpty() -> {
@@ -138,7 +137,7 @@ fun TableScreen(
                                         Text(s.teamName, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                                     }
                                 }
-                                Text("${s.goals}", Modifier.width(40.dp), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                                Text("${s.goals}", Modifier.width(40.dp), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 Text("${s.assists ?: "-"}", Modifier.width(56.dp), color = TextSecondary)
                             }
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -153,7 +152,7 @@ fun TableScreen(
                             Text(
                                 text = group.groupName.replace("_", " "),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = PrimaryGreen,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                             )
