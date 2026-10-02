@@ -31,7 +31,9 @@ data class HomeUiState(
     val lastRefreshTime: String? = null,
     val showOnlyFavorites: Boolean = false,
     val selectedLeagueCodes: Set<String> = AppPreferences.DEFAULT_LEAGUES,
-    val favoriteTeamIds: Set<String> = emptySet()
+    val favoriteTeamIds: Set<String> = emptySet(),
+    val hasLiveMatches: Boolean = false,
+    val isOffline: Boolean = false
 )
 
 class HomeViewModel(
@@ -86,6 +88,19 @@ class HomeViewModel(
         loadDay(date)
     }
 
+    fun goToToday() {
+        val today = dateFormat.format(Calendar.getInstance().time)
+        if (today !in _uiState.value.availableDates) {
+            val dates = buildDateList(pastDays = 3, futureDays = 12)
+            _uiState.value = _uiState.value.copy(availableDates = dates)
+        }
+        selectDate(today)
+    }
+
+    fun setOffline(offline: Boolean) {
+        _uiState.value = _uiState.value.copy(isOffline = offline)
+    }
+
     fun refresh() {
         loadDay(_uiState.value.selectedDate, forceRefresh = true)
     }
@@ -136,11 +151,16 @@ class HomeViewModel(
 
                 val withMatches = results.filter { it.matches.isNotEmpty() }
                 val now = timeFormat.format(Calendar.getInstance().time)
+                val live = withMatches.any { block ->
+                    block.matches.any { it.strStatus == "LIVE" }
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isRefreshing = false,
                     leaguesForDay = withMatches,
                     lastRefreshTime = now,
+                    hasLiveMatches = live,
+                    isOffline = false,
                     error = when {
                         withMatches.isEmpty() && onlyFav -> "Nincs kedvenc csapat meccse ezen a napon"
                         withMatches.isEmpty() -> "Nincs meccs ezen a napon a kiválasztott ligákban"
@@ -148,10 +168,13 @@ class HomeViewModel(
                     }
                 )
             } catch (e: Exception) {
+                val msg = e.message ?: "Hiba a betöltés során (ellenőrizd a netet)"
+                val offline = "internet" in msg.lowercase() || "Unable to resolve" in msg || "UnknownHost" in msg
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    error = e.message ?: "Hiba a betöltés során (ellenőrizd a netet)"
+                    isOffline = offline,
+                    error = msg
                 )
             }
         }

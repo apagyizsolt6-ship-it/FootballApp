@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.footballapp.data.model.Team
 import com.example.footballapp.data.repository.SportsRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val isLoading: Boolean = false,
     val teams: List<Team> = emptyList(),
+    val favoriteTeams: List<Team> = emptyList(),
     val query: String = "",
     val error: String? = null
 )
@@ -25,6 +28,9 @@ class SearchViewModel(
 
     fun onQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
+        if (query.isBlank()) {
+            _uiState.value = _uiState.value.copy(teams = emptyList(), error = null)
+        }
     }
 
     fun search() {
@@ -40,6 +46,21 @@ class SearchViewModel(
                 teams = result.getOrDefault(emptyList()),
                 error = result.exceptionOrNull()?.message
             )
+        }
+    }
+
+    fun loadFavorites(favoriteIds: Set<String>) {
+        if (favoriteIds.isEmpty()) {
+            _uiState.value = _uiState.value.copy(favoriteTeams = emptyList())
+            return
+        }
+        viewModelScope.launch {
+            val teams = favoriteIds.map { id ->
+                async {
+                    repository.getTeam(id).getOrNull()
+                }
+            }.awaitAll().filterNotNull()
+            _uiState.value = _uiState.value.copy(favoriteTeams = teams)
         }
     }
 }
