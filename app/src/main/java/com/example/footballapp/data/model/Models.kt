@@ -113,13 +113,18 @@ data class Event(
     val strAwayTeam: String? = null,
     val intHomeScore: String? = null,
     val intAwayScore: String? = null,
+    val intHomeHtScore: String? = null,
+    val intAwayHtScore: String? = null,
     val dateEvent: String? = null,
     val strTime: String? = null,
     val strStatus: String? = null,
     val idHomeTeam: String? = null,
     val idAwayTeam: String? = null,
     val strHomeTeamBadge: String? = null,
-    val strAwayTeamBadge: String? = null
+    val strAwayTeamBadge: String? = null,
+    val matchday: Int? = null,
+    val stage: String? = null,
+    val group: String? = null
 )
 
 fun FdMatch.toEvent(): Event {
@@ -139,6 +144,9 @@ fun FdMatch.toEvent(): Event {
         else -> status
     }
 
+    val htHome = score?.halfTime?.home?.toString()
+    val htAway = score?.halfTime?.away?.toString()
+
     return Event(
         idEvent = id?.toString(),
         strEvent = "${homeTeam?.name} vs ${awayTeam?.name}",
@@ -147,13 +155,18 @@ fun FdMatch.toEvent(): Event {
         strAwayTeam = awayTeam?.name,
         intHomeScore = homeScore,
         intAwayScore = awayScore,
+        intHomeHtScore = htHome,
+        intAwayHtScore = htAway,
         dateEvent = date,
         strTime = time,
         strStatus = statusText,
         idHomeTeam = homeTeam?.id?.toString(),
         idAwayTeam = awayTeam?.id?.toString(),
         strHomeTeamBadge = homeTeam?.crest,
-        strAwayTeamBadge = awayTeam?.crest
+        strAwayTeamBadge = awayTeam?.crest,
+        matchday = matchday,
+        stage = stage,
+        group = group
     )
 }
 
