@@ -20,7 +20,26 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          # GitHub runner-eken már van Android SDK
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          
+          # local.properties létrehozása
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+
+          # Licenszek elfogadása nem-interaktív módon
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n84831b940964496ad9267ff4d6e4b4d6" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb6" > $ANDROID_HOME/licenses/android-googletv-license
+          echo -e "\n601085b94cd77f0b54ff86406957099e" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
+          echo -e "\n33b6a2b64607f11b759f320ef9dff4ae" > $ANDROID_HOME/licenses/google-gdk-license
+          echo -e "\n994b2c67b605f9aabe1d1747a85e83f1" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
+
+          # Szükséges csomagok telepítése
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -33,16 +52,16 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:assembleDebug --stacktrace
 
-      - name: List APK files (debug)
+      - name: Show APK location
         run: |
-          echo "=== Looking for APKs ==="
-          find app/build/outputs -name "*.apk" -type f || true
-          ls -la app/build/outputs/apk/debug/ || true
+          echo "=== APK files found ==="
+          find app/build/outputs -name "*.apk" -type f
+          ls -lah app/build/outputs/apk/debug/ || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: FootballApp-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error   # <-- ha nincs APK, a job elbukik
+          if-no-files-found: error
           retention-days: 14
